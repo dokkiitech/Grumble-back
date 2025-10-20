@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: grumble
+      POSTGRES_PASSWORD: grumble
+      POSTGRES_DB: grumble
+    ports:
+      - "5432:5432"
+    volumes:
+      - grumble-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grumble"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    working_dir: /app
+    command: go run ./cmd/api
+    environment:
+      DATABASE_URL: postgres://grumble:grumble@db:5432/grumble?sslmode=disable
+      GRUMBLE_HTTP_ADDR: :8080
+    volumes:
+      - ..:/app
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  grumble-db-data:
+  go-mod-cache:
+  go-build-cache:
