@@ -84,7 +84,7 @@ Grumbleは、他の匿名SNSとは目的と世界観が本質的に異なりま�
   - **一体感:** 「みんなも月曜日が嫌なんだ」「この理不尽さに苦しんでいるのは自分だけじゃないんだ」という感覚が、共通の敵を倒すという目的を通じて、強烈な一体感に変わります。
 
 
-
+```
 grumble-backend/
 ├─ cmd/
 │  ├─ api/
@@ -227,6 +227,7 @@ grumble-backend/
 ├─ go.mod
 ├─ go.sum
 └─ README.md
+```
 
 # 技育ハッカソンDB設計 - Grumble (PostgreSQL)
 
