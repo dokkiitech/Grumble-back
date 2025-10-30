@@ -1,6 +1,45 @@
+# IDE and Editor
 .claude/
 .specify/
 .idea/
 .vscode/
 .DS_Store
+
+# Go specific
 vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+
+# Environment and config
+.env
+.env.local
+.env.*.local
+*.log
+
+# Build artifacts
+bin/
+dist/
+build/
+
+# Test coverage
+coverage.txt
+*.coverprofile
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+.dockerignore
