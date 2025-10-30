@@ -93,7 +93,7 @@ grumble-backend/
 │  ├─ batch/
 │  │  └─ main.go                 # cronやジョブワーカー起動
 │  └─ migrate/
-│     └─ main.go                 # DBマイグレーションCLI（任意）
+│     └─ main.go                 # DBマイグレーションCLI
 │
 ├─ api/
 │  ├─ openapi/
@@ -276,9 +276,18 @@ docker compose -f docker/docker-compose.yml up -d
 export DATABASE_URL="postgres://grumble:grumble@localhost:5432/grumble?sslmode=disable"
 export GRUMBLE_HTTP_ADDR=":8080"
 
-# 5. API サーバー起動（マイグレーション自動実行）
+# 5. DBマイグレーション実行
+go run ./cmd/migrate
+
+# 6. API サーバー起動
 go run ./cmd/api
 ```
+
+## マイグレーションの運用
+
+- `go run ./cmd/migrate` は `migrations/*.sql` を適用し、`schema_migrations` テーブルで実行済みバージョンを管理します。
+- API を起動する前に一度実行してください（デプロイや CI/CD でも同様）。
+- SQL ファイルを追加したら、各環境でこの CLI を再実行するだけで差分が適用されます。
 
 ## OpenAPI 仕様について
 
