@@ -1,2 +1,6 @@
 .claude/
 .specify/
+.idea/
+.vscode/
+.DS_Store
+vendor/
