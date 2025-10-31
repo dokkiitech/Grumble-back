@@ -2,13 +2,12 @@ package controller
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/dokkiitech/grumble-back/internal/domain/shared"
 	"github.com/dokkiitech/grumble-back/internal/logging"
 	"github.com/dokkiitech/grumble-back/internal/usecase"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 const defaultTimelinePageSize = 20
@@ -34,92 +33,72 @@ func NewTimelineController(
 }
 
 // GetGrumbles handles GET /grumbles (�����֗)
-func (ctrl *TimelineController) GetGrumbles(c *gin.Context) {
-	// Parse query parameters
-	var toxicLevelMin *shared.ToxicLevel
-	var toxicLevelMax *shared.ToxicLevel
-	var unpurifiedOnly *bool
+func (ctrl *TimelineController) GetGrumbles(
+	c *gin.Context,
+	userID *openapi_types.UUID,
+	toxicLevelMin *int,
+	toxicLevelMax *int,
+	unpurifiedOnly *bool,
+	limit *int,
+	offset *int,
+) {
+	// Convert API params to domain types
+	var toxicLevelMinDomain *shared.ToxicLevel
+	var toxicLevelMaxDomain *shared.ToxicLevel
 	var userIDFilter *shared.UserID
 
-	if v := c.Query("toxic_level_min"); v != "" {
-		iv, err := strconv.Atoi(v)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "INVALID_QUERY_PARAM", "message": "toxic_level_min must be an integer between 1 and 5"})
-			return
-		}
-		tl := shared.ToxicLevel(iv)
+	if toxicLevelMin != nil {
+		tl := shared.ToxicLevel(*toxicLevelMin)
 		if err := tl.Validate(); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "INVALID_QUERY_PARAM", "message": err.Error()})
 			return
 		}
-		toxicLevelMin = &tl
+		toxicLevelMinDomain = &tl
 	}
 
-	if v := c.Query("toxic_level_max"); v != "" {
-		iv, err := strconv.Atoi(v)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "INVALID_QUERY_PARAM", "message": "toxic_level_max must be an integer between 1 and 5"})
-			return
-		}
-		tl := shared.ToxicLevel(iv)
+	if toxicLevelMax != nil {
+		tl := shared.ToxicLevel(*toxicLevelMax)
 		if err := tl.Validate(); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "INVALID_QUERY_PARAM", "message": err.Error()})
 			return
 		}
-		toxicLevelMax = &tl
+		toxicLevelMaxDomain = &tl
 	}
 
-	if toxicLevelMin != nil && toxicLevelMax != nil && int(*toxicLevelMin) > int(*toxicLevelMax) {
+	if toxicLevelMinDomain != nil && toxicLevelMaxDomain != nil && int(*toxicLevelMinDomain) > int(*toxicLevelMaxDomain) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "INVALID_QUERY_PARAM", "message": "toxic_level_min cannot be greater than toxic_level_max"})
 		return
 	}
 
-	if v := c.Query("unpurified_only"); v != "" {
-		if b, err := strconv.ParseBool(v); err == nil {
-			unpurifiedOnly = &b
-		} else {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "INVALID_QUERY_PARAM", "message": "unpurified_only must be a boolean"})
-			return
-		}
-	}
-
-	if v := c.Query("user_id"); v != "" {
-		if _, err := uuid.Parse(v); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "INVALID_QUERY_PARAM", "message": "user_id must be a valid UUID"})
-			return
-		}
-		uid := shared.UserID(v)
+	if userID != nil {
+		uid := shared.UserID(userID.String())
 		userIDFilter = &uid
 	}
 
 	// Calculate page and page size
 	page := 1
 	pageSize := defaultTimelinePageSize
-	offset := 0
+	offsetValue := 0
 
-	if v := c.Query("limit"); v != "" {
-		if iv, err := strconv.Atoi(v); err == nil && iv > 0 {
-			pageSize = iv
-		}
+	if limit != nil && *limit > 0 {
+		pageSize = *limit
 	}
-	if v := c.Query("offset"); v != "" {
-		if iv, err := strconv.Atoi(v); err == nil && iv >= 0 {
-			offset = iv
-		}
+	if offset != nil && *offset >= 0 {
+		offsetValue = *offset
 	}
-	if offset > 0 {
-		page = (offset / pageSize) + 1
+	if offsetValue > 0 {
+		page = (offsetValue / pageSize) + 1
 	}
 
 	// Build usecase request
 	req := usecase.TimelineRequest{
-		ToxicLevelMin:  toxicLevelMin,
-		ToxicLevelMax:  toxicLevelMax,
+		ToxicLevelMin:  toxicLevelMinDomain,
+		ToxicLevelMax:  toxicLevelMaxDomain,
 		UnpurifiedOnly: unpurifiedOnly,
 		UserID:         userIDFilter,
 		Page:           page,
 		PageSize:       pageSize,
-		Offset:         offset,
+		Offset:         offsetValue,
 	}
 
 	// Execute use case

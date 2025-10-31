@@ -44,7 +44,15 @@ func (s *ServerImpl) GetEvent(c *gin.Context, eventID int) {
 
 // GetGrumbles implements ServerInterface
 func (s *ServerImpl) GetGrumbles(c *gin.Context, params GetGrumblesParams) {
-	s.timelineController.GetGrumbles(c)
+	s.timelineController.GetGrumbles(
+		c,
+		params.UserID,
+		params.ToxicLevelMin,
+		params.ToxicLevelMax,
+		params.UnpurifiedOnly,
+		params.Limit,
+		params.Offset,
+	)
 }
 
 // CreateGrumble implements ServerInterface
