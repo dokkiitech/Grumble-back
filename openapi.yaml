@@ -9,7 +9,16 @@ servers:
   - url: https://api.grumble.app/v1
     description: 本番環境
 
+security:
+  - FirebaseAuth: []
+
 components:
+  securitySchemes:
+    FirebaseAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     Grumble:
       type: object
@@ -272,6 +281,12 @@ paths:
                   total:
                     type: integer
                     description: 総件数
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: リクエストエラー
           content:
@@ -296,6 +311,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Grumble'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: リクエストエラー
           content:
@@ -333,6 +354,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Vibe'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: リクエストエラー（既に押済みなど）
           content:
@@ -358,6 +385,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnonymousUser'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /events:
     get:
@@ -382,6 +415,12 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Event'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /events/{event_id}:
     get:
@@ -401,6 +440,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Event'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: イベントが見つからない
           content:

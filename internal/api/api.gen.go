@@ -17,6 +17,10 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+const (
+	FirebaseAuthScopes = "FirebaseAuth.Scopes"
+)
+
 // Defines values for EventEventType.
 const (
 	EventEventTypeDAIONRYO  EventEventType = "DAIONRYO"
@@ -217,6 +221,8 @@ func (siw *ServerInterfaceWrapper) GetEvents(c *gin.Context) {
 
 	var err error
 
+	c.Set(FirebaseAuthScopes, []string{})
+
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetEventsParams
 
@@ -252,6 +258,8 @@ func (siw *ServerInterfaceWrapper) GetEvent(c *gin.Context) {
 		return
 	}
 
+	c.Set(FirebaseAuthScopes, []string{})
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -266,6 +274,8 @@ func (siw *ServerInterfaceWrapper) GetEvent(c *gin.Context) {
 func (siw *ServerInterfaceWrapper) GetGrumbles(c *gin.Context) {
 
 	var err error
+
+	c.Set(FirebaseAuthScopes, []string{})
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetGrumblesParams
@@ -323,6 +333,8 @@ func (siw *ServerInterfaceWrapper) GetGrumbles(c *gin.Context) {
 // CreateGrumble operation middleware
 func (siw *ServerInterfaceWrapper) CreateGrumble(c *gin.Context) {
 
+	c.Set(FirebaseAuthScopes, []string{})
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -347,6 +359,8 @@ func (siw *ServerInterfaceWrapper) AddVibe(c *gin.Context) {
 		return
 	}
 
+	c.Set(FirebaseAuthScopes, []string{})
+
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -359,6 +373,8 @@ func (siw *ServerInterfaceWrapper) AddVibe(c *gin.Context) {
 
 // GetMyProfile operation middleware
 func (siw *ServerInterfaceWrapper) GetMyProfile(c *gin.Context) {
+
+	c.Set(FirebaseAuthScopes, []string{})
 
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
@@ -424,6 +440,15 @@ func (response GetEvents200JSONResponse) VisitGetEventsResponse(w http.ResponseW
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetEvents401JSONResponse ErrorResponse
+
+func (response GetEvents401JSONResponse) VisitGetEventsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetEventRequestObject struct {
 	EventID int `json:"event_id"`
 }
@@ -437,6 +462,15 @@ type GetEvent200JSONResponse Event
 func (response GetEvent200JSONResponse) VisitGetEventResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetEvent401JSONResponse ErrorResponse
+
+func (response GetEvent401JSONResponse) VisitGetEventResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -481,6 +515,15 @@ func (response GetGrumbles400JSONResponse) VisitGetGrumblesResponse(w http.Respo
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetGrumbles401JSONResponse ErrorResponse
+
+func (response GetGrumbles401JSONResponse) VisitGetGrumblesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type CreateGrumbleRequestObject struct {
 	Body *CreateGrumbleJSONRequestBody
 }
@@ -503,6 +546,15 @@ type CreateGrumble400JSONResponse ErrorResponse
 func (response CreateGrumble400JSONResponse) VisitCreateGrumbleResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGrumble401JSONResponse ErrorResponse
+
+func (response CreateGrumble401JSONResponse) VisitCreateGrumbleResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
 
 	return json.NewEncoder(w).Encode(response)
 }
@@ -534,6 +586,15 @@ func (response AddVibe400JSONResponse) VisitAddVibeResponse(w http.ResponseWrite
 	return json.NewEncoder(w).Encode(response)
 }
 
+type AddVibe401JSONResponse ErrorResponse
+
+func (response AddVibe401JSONResponse) VisitAddVibeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type AddVibe404JSONResponse ErrorResponse
 
 func (response AddVibe404JSONResponse) VisitAddVibeResponse(w http.ResponseWriter) error {
@@ -555,6 +616,15 @@ type GetMyProfile200JSONResponse AnonymousUser
 func (response GetMyProfile200JSONResponse) VisitGetMyProfileResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetMyProfile401JSONResponse ErrorResponse
+
+func (response GetMyProfile401JSONResponse) VisitGetMyProfileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
 
 	return json.NewEncoder(w).Encode(response)
 }
