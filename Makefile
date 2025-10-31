@@ -1,9 +1,7 @@
 .PHONY: init generate clean test local-setup local-db-up local-db-down local-migrate local-api local-down
 
-# OpenAPI schema location (external repository)
-OPENAPI_REPO := git@github.com:dokkiitech/Grumble.git
-OPENAPI_FILE := ../Grumble/openapi.yaml
-OPENAPI_REMOTE_URL := https://raw.githubusercontent.com/dokkiitech/Grumble/main/openapi.yaml
+# OpenAPI schema location (managed in this repository)
+OPENAPI_FILE := openapi.yaml
 DOCKER_COMPOSE := docker compose -f docker/docker-compose.yml
 LOCAL_DATABASE_URL := postgres://grumble:grumble@localhost:5432/grumble?sslmode=disable
 LOCAL_HTTP_ADDR := :8080
@@ -22,16 +20,14 @@ __init_oapi_codegen__:
 
 init: __init_go__ __init_oapi_codegen__
 
-# Generate code from local OpenAPI file (if Grumble repo is cloned as sibling)
+# Generate code from OpenAPI file
 generate:
-	@if [ -f "$(OPENAPI_FILE)" ]; then \
-		echo "Generating from local OpenAPI file: $(OPENAPI_FILE)"; \
-		oapi-codegen -config oapi-codegen/api.yml $(OPENAPI_FILE); \
-	else \
-		echo "Local OpenAPI file not found. Downloading from GitHub..."; \
-		curl -sSL $(OPENAPI_REMOTE_URL) -o /tmp/openapi.yaml; \
-		oapi-codegen -config oapi-codegen/api.yml /tmp/openapi.yaml; \
+	@if [ ! -f "$(OPENAPI_FILE)" ]; then \
+		echo "Error: OpenAPI file not found: $(OPENAPI_FILE)"; \
+		exit 1; \
 	fi
+	@echo "Generating from OpenAPI file: $(OPENAPI_FILE)"
+	@oapi-codegen -config oapi-codegen/api.yml $(OPENAPI_FILE)
 
 # Clean generated files
 clean:

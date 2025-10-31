@@ -1,0 +1,409 @@
+openapi: 3.0.3
+info:
+  title: Grumble API
+  description: 愚痴を吐き出すアプリ「Grumble」のバックエンドAPI
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+    description: ローカル開発環境
+  - url: https://api.grumble.app/v1
+    description: 本番環境
+
+components:
+  schemas:
+    Grumble:
+      type: object
+      required:
+        - grumble_id
+        - user_id
+        - content
+        - toxic_level
+        - vibe_count
+        - is_purified
+        - posted_at
+        - expires_at
+        - is_event_grumble
+      properties:
+        grumble_id:
+          type: string
+          format: uuid
+          description: 投稿の一意識別子
+        user_id:
+          type: string
+          format: uuid
+          description: 投稿者の匿名ID
+        content:
+          type: string
+          maxLength: 280
+          description: 愚痴の本文
+        toxic_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: 毒レベル（1〜5）
+        vibe_count:
+          type: integer
+          minimum: 0
+          description: 「わかる…」の総数
+        is_purified:
+          type: boolean
+          description: 成仏フラグ
+        posted_at:
+          type: string
+          format: date-time
+          description: 投稿時刻
+        expires_at:
+          type: string
+          format: date-time
+          description: 投稿後24時間後の時刻
+        is_event_grumble:
+          type: boolean
+          description: イベント投稿か否か
+        has_vibed:
+          type: boolean
+          description: ログインユーザーが「わかる…」済みか
+
+    CreateGrumbleRequest:
+      type: object
+      required:
+        - content
+        - toxic_level
+      properties:
+        content:
+          type: string
+          maxLength: 280
+          description: 愚痴の本文
+        toxic_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: 毒レベル（1〜5）
+        is_event_grumble:
+          type: boolean
+          default: false
+          description: イベント投稿か否か
+
+    Vibe:
+      type: object
+      required:
+        - vibe_id
+        - grumble_id
+        - user_id
+        - vibe_type
+        - voted_at
+      properties:
+        vibe_id:
+          type: integer
+          description: 共感履歴の一意識別子
+        grumble_id:
+          type: string
+          format: uuid
+          description: 共感対象の投稿ID
+        user_id:
+          type: string
+          format: uuid
+          description: 共感した匿名ユーザーID
+        vibe_type:
+          type: string
+          enum: [WAKARU]
+          description: 共感の種類
+        voted_at:
+          type: string
+          format: date-time
+          description: 共感した時刻
+
+    AnonymousUser:
+      type: object
+      required:
+        - user_id
+        - virtue_points
+        - created_at
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: 匿名ユーザーの一意識別子
+        virtue_points:
+          type: integer
+          minimum: 0
+          description: 徳ポイント
+        created_at:
+          type: string
+          format: date-time
+          description: ユーザー作成日時
+        profile_title:
+          type: string
+          maxLength: 50
+          nullable: true
+          description: 称号（例：「今週の菩薩」）
+
+    Event:
+      type: object
+      required:
+        - event_id
+        - event_name
+        - event_type
+        - start_time
+        - end_time
+        - is_active
+      properties:
+        event_id:
+          type: integer
+          description: イベントの一意識別子
+        event_name:
+          type: string
+          maxLength: 100
+          description: イベントの名称
+        event_type:
+          type: string
+          enum: [DAIONRYO, OTAKINAGE]
+          description: イベントの種類
+        start_time:
+          type: string
+          format: date-time
+          description: イベント開始時刻
+        end_time:
+          type: string
+          format: date-time
+          description: イベント終了時刻
+        current_hp:
+          type: integer
+          nullable: true
+          description: 大怨霊の現在HP
+        max_hp:
+          type: integer
+          nullable: true
+          description: 大怨霊の最大HP
+        is_active:
+          type: boolean
+          description: 現在開催中のイベントか否か
+
+    TimelineFilter:
+      type: object
+      properties:
+        toxic_level_min:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: 毒レベルの最小値
+        toxic_level_max:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: 毒レベルの最大値
+        unpurified_only:
+          type: boolean
+          default: false
+          description: 未成仏のみ表示
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+          description: 取得件数
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+          description: オフセット
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: エラーコード
+        message:
+          type: string
+          description: エラーメッセージ
+
+paths:
+  /grumbles:
+    get:
+      summary: タイムライン取得
+      description: 愚痴投稿を新しい順に取得
+      operationId: getGrumbles
+      parameters:
+        - name: toxic_level_min
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+        - name: toxic_level_max
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+        - name: unpurified_only
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: 投稿リスト
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  grumbles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Grumble'
+                  total:
+                    type: integer
+                    description: 総件数
+        '400':
+          description: リクエストエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: 投稿作成
+      description: 新しい愚痴を投稿
+      operationId: createGrumble
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGrumbleRequest'
+      responses:
+        '201':
+          description: 投稿成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Grumble'
+        '400':
+          description: リクエストエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /grumbles/{grumble_id}/vibes:
+    post:
+      summary: 「わかる…」を送る
+      description: 指定された投稿に「わかる…」を押す
+      operationId: addVibe
+      parameters:
+        - name: grumble_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vibe_type:
+                  type: string
+                  enum: [WAKARU]
+                  default: WAKARU
+      responses:
+        '201':
+          description: 共感成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vibe'
+        '400':
+          description: リクエストエラー（既に押済みなど）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 投稿が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/me:
+    get:
+      summary: 自分のユーザー情報取得
+      description: ログインユーザーの情報を取得
+      operationId: getMyProfile
+      responses:
+        '200':
+          description: ユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnonymousUser'
+
+  /events:
+    get:
+      summary: イベント一覧取得
+      description: 現在開催中のイベント一覧を取得
+      operationId: getEvents
+      parameters:
+        - name: active_only
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: イベント一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+
+  /events/{event_id}:
+    get:
+      summary: イベント詳細取得
+      description: 指定されたイベントの詳細情報を取得
+      operationId: getEvent
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: イベント詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: イベントが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
