@@ -71,6 +71,13 @@ func (uc *VibeAddUseCase) Add(ctx context.Context, req AddVibeRequest) (*AddVibe
 		}
 	}
 
+	if grumbleEntity.UserID == req.UserID {
+		return nil, &shared.ValidationError{
+			Field:   "grumble_id",
+			Message: "cannot vibe your own grumble",
+		}
+	}
+
 	// Prevent duplicate vibes
 	exists, err := uc.vibeRepo.Exists(ctx, req.GrumbleID, req.UserID)
 	if err != nil {
