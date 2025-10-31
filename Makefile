@@ -1,4 +1,4 @@
-.PHONY: init generate clean test local-setup local-db-up local-db-down local-migrate local-api local-down
+.PHONY: init generate clean test format lint precommit local-setup local-db-up local-db-down local-migrate local-api local-down
 
 # OpenAPI schema location (managed in this repository)
 OPENAPI_FILE := openapi.yaml
@@ -36,6 +36,27 @@ clean:
 # Run tests
 test:
 	@go test -v ./...
+
+# Format code
+format:
+	@echo "Formatting code..."
+	@go fmt ./...
+	@echo "Code formatting complete."
+
+# Lint code
+lint:
+	@echo "Running linter..."
+	@if ! command -v golangci-lint &> /dev/null; then \
+		echo "golangci-lint not found. Install it with:"; \
+		echo "  go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
+		exit 1; \
+	fi
+	@golangci-lint run ./...
+	@echo "Linting complete."
+
+# Pre-commit checks: format, lint, and test
+precommit: format lint test
+	@echo "✓ All pre-commit checks passed!"
 
 vendor:
 	@go mod vendor
