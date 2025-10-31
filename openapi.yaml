@@ -225,9 +225,11 @@ components:
         error:
           type: string
           description: エラーコード
+          example: "DUPLICATE_VIBE"
         message:
           type: string
           description: エラーメッセージ
+          example: "既にこの投稿に「わかる…」を送信しています"
 
 paths:
   /grumbles:
@@ -236,6 +238,13 @@ paths:
       description: 愚痴投稿を新しい順に取得
       operationId: getGrumbles
       parameters:
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: 取得対象のユーザーID
+          required: false
         - name: toxic_level_min
           in: query
           schema:
@@ -354,20 +363,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Vibe'
+        '400':
+          description: リクエストエラー（バリデーションエラーなど）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: 認証エラー
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '400':
-          description: リクエストエラー（既に押済みなど）
+        '404':
+          description: 投稿が見つからない
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: 投稿が見つからない
+        '409':
+          description: 既にvibeを送信済み（競合）
           content:
             application/json:
               schema:

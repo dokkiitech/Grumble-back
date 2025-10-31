@@ -268,6 +268,12 @@ func buildTimelineFilter(base string, filter grumble.TimelineFilter) (string, []
 	args := []interface{}{}
 	argIdx := 1
 
+	if filter.UserID != nil {
+		query += fmt.Sprintf(" AND user_id = $%d", argIdx)
+		args = append(args, string(*filter.UserID))
+		argIdx++
+	}
+
 	if filter.ExcludePurified {
 		query += " AND is_purified = FALSE"
 	}

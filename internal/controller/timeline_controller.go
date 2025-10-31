@@ -8,6 +8,7 @@ import (
 	"github.com/dokkiitech/grumble-back/internal/logging"
 	"github.com/dokkiitech/grumble-back/internal/usecase"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // TimelineController handles timeline-related HTTP requests
@@ -36,6 +37,7 @@ func (ctrl *TimelineController) GetGrumbles(c *gin.Context) {
 	var toxicLevelMin *shared.ToxicLevel
 	var toxicLevelMax *shared.ToxicLevel
 	var unpurifiedOnly *bool
+	var userIDFilter *shared.UserID
 
 	if v := c.Query("toxic_level_min"); v != "" {
 		iv, err := strconv.Atoi(v)
@@ -79,6 +81,15 @@ func (ctrl *TimelineController) GetGrumbles(c *gin.Context) {
 		}
 	}
 
+	if v := c.Query("user_id"); v != "" {
+		if _, err := uuid.Parse(v); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "INVALID_QUERY_PARAM", "message": "user_id must be a valid UUID"})
+			return
+		}
+		uid := shared.UserID(v)
+		userIDFilter = &uid
+	}
+
 	// Calculate page and page size
 	page := 1
 	pageSize := 20 // default
@@ -103,6 +114,7 @@ func (ctrl *TimelineController) GetGrumbles(c *gin.Context) {
 		ToxicLevelMin:  toxicLevelMin,
 		ToxicLevelMax:  toxicLevelMax,
 		UnpurifiedOnly: unpurifiedOnly,
+		UserID:         userIDFilter,
 		Page:           page,
 		PageSize:       pageSize,
 		Offset:         offset,

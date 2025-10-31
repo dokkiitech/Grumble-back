@@ -24,6 +24,7 @@ type TimelineRequest struct {
 	ToxicLevelMin  *shared.ToxicLevel // Optional minimum toxic level (inclusive)
 	ToxicLevelMax  *shared.ToxicLevel // Optional maximum toxic level (inclusive)
 	UnpurifiedOnly *bool              // Optional flag to restrict to unpurified grumbles
+	UserID         *shared.UserID     // Optional filter for author
 	Page           int                // Page number (1-indexed)
 	PageSize       int                // Number of items per page
 	Offset         int                // Number of items to skip before starting results
@@ -68,6 +69,7 @@ func (uc *TimelineGetUseCase) Get(ctx context.Context, req TimelineRequest) (*Ti
 		ToxicLevelMax:   req.ToxicLevelMax,
 		ExcludePurified: excludePurified,
 		ExcludeExpired:  true, // Always exclude expired grumbles
+		UserID:          req.UserID,
 		Limit:           req.PageSize,
 		Offset:          offset,
 	}

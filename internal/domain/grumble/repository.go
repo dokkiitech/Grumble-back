@@ -11,6 +11,7 @@ type TimelineFilter struct {
 	ToxicLevelMax   *shared.ToxicLevel // Maximum toxic level (inclusive)
 	ExcludePurified bool               // Exclude purified grumbles
 	ExcludeExpired  bool               // Exclude expired grumbles
+	UserID          *shared.UserID     // Filter by author user ID
 	Limit           int                // Number of results to return
 	Offset          int                // Number of results to skip
 }

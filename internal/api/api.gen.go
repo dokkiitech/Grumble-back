@@ -164,11 +164,13 @@ type GetEventsParams struct {
 
 // GetGrumblesParams defines parameters for GetGrumbles.
 type GetGrumblesParams struct {
-	ToxicLevelMin  *int  `form:"toxic_level_min,omitempty" json:"toxic_level_min,omitempty"`
-	ToxicLevelMax  *int  `form:"toxic_level_max,omitempty" json:"toxic_level_max,omitempty"`
-	UnpurifiedOnly *bool `form:"unpurified_only,omitempty" json:"unpurified_only,omitempty"`
-	Limit          *int  `form:"limit,omitempty" json:"limit,omitempty"`
-	Offset         *int  `form:"offset,omitempty" json:"offset,omitempty"`
+	// UserID 取得対象のユーザーID
+	UserID         *openapi_types.UUID `form:"user_id,omitempty" json:"user_id,omitempty"`
+	ToxicLevelMin  *int                `form:"toxic_level_min,omitempty" json:"toxic_level_min,omitempty"`
+	ToxicLevelMax  *int                `form:"toxic_level_max,omitempty" json:"toxic_level_max,omitempty"`
+	UnpurifiedOnly *bool               `form:"unpurified_only,omitempty" json:"unpurified_only,omitempty"`
+	Limit          *int                `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset         *int                `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
 // AddVibeJSONBody defines parameters for AddVibe.
@@ -279,6 +281,14 @@ func (siw *ServerInterfaceWrapper) GetGrumbles(c *gin.Context) {
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params GetGrumblesParams
+
+	// ------------- Optional query parameter "user_id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "user_id", c.Request.URL.Query(), &params.UserID)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter user_id: %w", err), http.StatusBadRequest)
+		return
+	}
 
 	// ------------- Optional query parameter "toxic_level_min" -------------
 
@@ -600,6 +610,15 @@ type AddVibe404JSONResponse ErrorResponse
 func (response AddVibe404JSONResponse) VisitAddVibeResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddVibe409JSONResponse ErrorResponse
+
+func (response AddVibe409JSONResponse) VisitAddVibeResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
 
 	return json.NewEncoder(w).Encode(response)
 }
