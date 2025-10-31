@@ -28,6 +28,7 @@ func (r *PostgresVibeRepository) Create(ctx context.Context, v *vibe.Vibe) (*vib
 		return nil, &shared.ValidationError{Field: "vibe", Message: "vibe cannot be nil"}
 	}
 
+	var err error
 	tx, err := r.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return nil, &shared.InternalError{
@@ -35,7 +36,11 @@ func (r *PostgresVibeRepository) Create(ctx context.Context, v *vibe.Vibe) (*vib
 			Err:     err,
 		}
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback(ctx)
+		}
+	}()
 
 	var (
 		insertQuery = `
@@ -101,12 +106,14 @@ func (r *PostgresVibeRepository) Create(ctx context.Context, v *vibe.Vibe) (*vib
 		}
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		return nil, &shared.InternalError{
 			Message: "failed to commit vibe transaction",
 			Err:     err,
 		}
 	}
+	// ensure deferred rollback does not execute after successful commit
+	err = nil
 
 	v.VibeID = shared.VibeID(vibeID)
 	v.VotedAt = votedAt

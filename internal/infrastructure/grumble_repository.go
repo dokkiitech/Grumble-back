@@ -97,7 +97,6 @@ func (r *PostgresGrumbleRepository) FindTimeline(ctx context.Context, filter gru
 	if filter.Offset > 0 {
 		query += fmt.Sprintf(" OFFSET $%d", argIdx)
 		args = append(args, filter.Offset)
-		argIdx++
 	}
 
 	rows, err := r.db.Query(ctx, query, args...)
