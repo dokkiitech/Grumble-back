@@ -11,6 +11,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const defaultTimelinePageSize = 20
+
 // TimelineController handles timeline-related HTTP requests
 type TimelineController struct {
 	timelineGetUC *usecase.TimelineGetUseCase
@@ -92,7 +94,7 @@ func (ctrl *TimelineController) GetGrumbles(c *gin.Context) {
 
 	// Calculate page and page size
 	page := 1
-	pageSize := 20 // default
+	pageSize := defaultTimelinePageSize
 	offset := 0
 
 	if v := c.Query("limit"); v != "" {
