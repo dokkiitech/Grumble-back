@@ -24,7 +24,10 @@ type Config struct {
 	FirebaseCredentialsFile string
 
 	// Business Rules
-	PurificationThreshold int
+	PurificationThreshold          int
+	BodhisattvaRankingLimitDefault int
+	BodhisattvaRankingLimitMin     int
+	BodhisattvaRankingLimitMax     int
 
 	// HTTP
 	CORSAllowedOrigins []string
@@ -38,15 +41,18 @@ type Config struct {
 // LoadConfig loads configuration from environment variables.
 func LoadConfig() (*Config, error) {
 	cfg := &Config{
-		HTTPAddr:                getEnv("GRUMBLE_HTTP_ADDR", ":8080"),
-		DatabaseURL:             os.Getenv("DATABASE_URL"),
-		FirebaseProjectID:       os.Getenv("FIREBASE_PROJECT_ID"),
-		FirebaseCredentialsFile: os.Getenv("FIREBASE_CREDENTIALS_FILE"),
-		CORSAllowedOrigins:      getEnvStringSlice("CORS_ALLOWED_ORIGINS", []string{"http://localhost:3000", "http://localhost:8081", "http://localhost:19006"}),
-		GinMode:                 getEnv("GIN_MODE", gin.ReleaseMode),
-		PurificationThreshold:   getEnvInt("PURIFICATION_THRESHOLD", 10),
-		DBMaxConns:              getEnvInt("DB_MAX_CONNS", 25),
-		DBMinConns:              getEnvInt("DB_MIN_CONNS", 5),
+		HTTPAddr:                       getEnv("GRUMBLE_HTTP_ADDR", ":8080"),
+		DatabaseURL:                    os.Getenv("DATABASE_URL"),
+		FirebaseProjectID:              os.Getenv("FIREBASE_PROJECT_ID"),
+		FirebaseCredentialsFile:        os.Getenv("FIREBASE_CREDENTIALS_FILE"),
+		CORSAllowedOrigins:             getEnvStringSlice("CORS_ALLOWED_ORIGINS", []string{"http://localhost:3000", "http://localhost:8081", "http://localhost:19006"}),
+		GinMode:                        getEnv("GIN_MODE", gin.ReleaseMode),
+		PurificationThreshold:          getEnvInt("PURIFICATION_THRESHOLD", 10),
+		BodhisattvaRankingLimitDefault: getEnvInt("BODHISATTVA_RANKING_LIMIT_DEFAULT", 10),
+		BodhisattvaRankingLimitMin:     getEnvInt("BODHISATTVA_RANKING_LIMIT_MIN", 1),
+		BodhisattvaRankingLimitMax:     getEnvInt("BODHISATTVA_RANKING_LIMIT_MAX", 100),
+		DBMaxConns:                     getEnvInt("DB_MAX_CONNS", 25),
+		DBMinConns:                     getEnvInt("DB_MIN_CONNS", 5),
 	}
 
 	if cfg.FirebaseCredentialsFile == "" {

@@ -14,9 +14,12 @@ import (
 
 // AuthController handles authentication-related HTTP requests
 type AuthController struct {
-	authAnonymousUC *usecase.AuthAnonymousUseCase
-	userQueryUC     *usecase.UserQueryUseCase
-	logger          logging.Logger
+	authAnonymousUC     *usecase.AuthAnonymousUseCase
+	userQueryUC         *usecase.UserQueryUseCase
+	logger              logging.Logger
+	rankingLimitDefault int
+	rankingLimitMin     int
+	rankingLimitMax     int
 }
 
 // NewAuthController creates a new AuthController
@@ -24,11 +27,23 @@ func NewAuthController(
 	authAnonymousUC *usecase.AuthAnonymousUseCase,
 	userQueryUC *usecase.UserQueryUseCase,
 	logger logging.Logger,
+	rankingLimitDefault int,
+	rankingLimitMin int,
+	rankingLimitMax int,
 ) *AuthController {
+	if rankingLimitMax < rankingLimitMin {
+		rankingLimitMax = rankingLimitMin
+	}
+	if rankingLimitDefault < rankingLimitMin || rankingLimitDefault > rankingLimitMax {
+		rankingLimitDefault = rankingLimitMin
+	}
 	return &AuthController{
-		authAnonymousUC: authAnonymousUC,
-		userQueryUC:     userQueryUC,
-		logger:          logger,
+		authAnonymousUC:     authAnonymousUC,
+		userQueryUC:         userQueryUC,
+		logger:              logger,
+		rankingLimitDefault: rankingLimitDefault,
+		rankingLimitMin:     rankingLimitMin,
+		rankingLimitMax:     rankingLimitMax,
 	}
 }
 
@@ -72,10 +87,10 @@ func (ctrl *AuthController) GetMyProfile(c *gin.Context) {
 // GetBodhisattvaRankings handles GET /users/rankings (����֗)
 // Note: This endpoint may not be in the OpenAPI spec yet
 func (ctrl *AuthController) GetBodhisattvaRankings(c *gin.Context) {
-	// Get limit from query param, default to 10
-	limit := 10
+	// Get limit from query param, default to configured value
+	limit := ctrl.rankingLimitDefault
 	if limitStr := c.Query("limit"); limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+		if l, err := strconv.Atoi(limitStr); err == nil && l >= ctrl.rankingLimitMin && l <= ctrl.rankingLimitMax {
 			limit = l
 		}
 	}

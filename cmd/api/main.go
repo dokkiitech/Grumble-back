@@ -98,7 +98,14 @@ func main() {
 	// Initialize controllers
 	grumbleController := controller.NewGrumbleController(grumblePostUC, grumblePresenter, logger)
 	timelineController := controller.NewTimelineController(timelineGetUC, timelinePresenter, logger)
-	authController := controller.NewAuthController(authAnonymousUC, userQueryUC, logger)
+	authController := controller.NewAuthController(
+		authAnonymousUC,
+		userQueryUC,
+		logger,
+		cfg.BodhisattvaRankingLimitDefault,
+		cfg.BodhisattvaRankingLimitMin,
+		cfg.BodhisattvaRankingLimitMax,
+	)
 	vibeController := controller.NewVibeController(vibeAddUC, logger)
 
 	// Initialize middleware
