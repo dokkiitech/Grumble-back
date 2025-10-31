@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	firebase "firebase.google.com/go/v4"
+
 	"github.com/dokkiitech/grumble-back/internal/api"
 	"github.com/dokkiitech/grumble-back/internal/config"
 	"github.com/dokkiitech/grumble-back/internal/controller"
@@ -16,8 +18,10 @@ import (
 	sharedservice "github.com/dokkiitech/grumble-back/internal/domain/shared/service"
 	"github.com/dokkiitech/grumble-back/internal/infrastructure"
 	"github.com/dokkiitech/grumble-back/internal/usecase"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"google.golang.org/api/option"
 )
 
 func main() {
@@ -49,6 +53,30 @@ func main() {
 
 	// Migrations must be applied separately via `go run ./cmd/migrate` before starting the API
 
+	// Initialize Firebase authentication
+	var firebaseOpts []option.ClientOption
+	if cfg.FirebaseCredentialsFile != "" {
+		firebaseOpts = append(firebaseOpts, option.WithCredentialsFile(cfg.FirebaseCredentialsFile))
+	}
+
+	var firebaseCfg *firebase.Config
+	if cfg.FirebaseProjectID != "" {
+		firebaseCfg = &firebase.Config{ProjectID: cfg.FirebaseProjectID}
+	}
+
+	firebaseApp, err := firebase.NewApp(ctx, firebaseCfg, firebaseOpts...)
+	if err != nil {
+		logger.Error("Failed to initialize Firebase app", "error", err)
+		log.Fatalf("Failed to initialize Firebase app: %v", err)
+	}
+
+	authClient, err := firebaseApp.Auth(ctx)
+	if err != nil {
+		logger.Error("Failed to create Firebase auth client", "error", err)
+		log.Fatalf("Failed to create Firebase auth client: %v", err)
+	}
+	logger.Info("Firebase authentication client initialized")
+
 	// Initialize repositories
 	grumbleRepo := infrastructure.NewPostgresGrumbleRepository(dbPool)
 	userRepo := infrastructure.NewPostgresUserRepository(dbPool)
@@ -74,7 +102,7 @@ func main() {
 	vibeController := controller.NewVibeController(vibeAddUC, logger)
 
 	// Initialize middleware
-	authMiddleware := middleware.NewAuthMiddleware(authAnonymousUC, logger)
+	authMiddleware := middleware.NewAuthMiddleware(authClient, authAnonymousUC, logger)
 
 	// Create server implementation that combines all controllers
 	serverImpl := api.NewServerImpl(grumbleController, timelineController, authController, vibeController)
@@ -83,6 +111,14 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.Use(gin.Recovery())
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     cfg.CORSAllowedOrigins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
+		ExposeHeaders:    []string{},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Global middleware
 	router.Use(func(c *gin.Context) {

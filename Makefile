@@ -68,4 +68,10 @@ local-migrate:
 	@DATABASE_URL="$(LOCAL_DATABASE_URL)" go run ./cmd/migrate
 
 local-api:
-	@DATABASE_URL="$(LOCAL_DATABASE_URL)" GRUMBLE_HTTP_ADDR="$(LOCAL_HTTP_ADDR)" go run ./cmd/api -o bin/api
+	@CURDIR="$(CURDIR)" bash -lc 'set -a; if [ -f .env ]; then source .env; fi; set +a; \
+		if [ -z "$$FIREBASE_CREDENTIALS_FILE" ] && [ -f firebase_secrets.json ]; then \
+			export FIREBASE_CREDENTIALS_FILE="$$CURDIR/firebase_secrets.json"; \
+		fi; \
+		export DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DATABASE_URL)}"; \
+		export GRUMBLE_HTTP_ADDR="$${GRUMBLE_HTTP_ADDR:-$(LOCAL_HTTP_ADDR)}"; \
+		go run ./cmd/api'
