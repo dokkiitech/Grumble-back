@@ -299,6 +299,7 @@ go run ./cmd/api
   - `GRUMBLE_HTTP_ADDR`: HTTP リッスンアドレス
   - `FIREBASE_PROJECT_ID`: Firebase プロジェクトID（サービスアカウントがあれば自動検出）
   - `FIREBASE_CREDENTIALS_FILE`: サービスアカウントJSONのパス（ADC利用時は空欄でも可）
+  - `GIN_MODE`: `release` / `debug` など Gin の動作モード（未設定時は `release`）
   - `CORS_ALLOWED_ORIGINS`: カンマ区切りで許可するオリジン（未設定時は `http://localhost:3000`,`http://localhost:8081`,`http://localhost:19006`）
 - ルート直下に `firebase_secrets.json` を配置すると自動検出されます（`.env` や `make local-api` で指定がない場合のデフォルト）。
 - Firebase Admin SDK を利用するため、ローカル開発ではサービスアカウントJSONをダウンロードし、`FIREBASE_CREDENTIALS_FILE` または `GOOGLE_APPLICATION_CREDENTIALS` でパスを指定してください。

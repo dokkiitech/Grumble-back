@@ -108,7 +108,7 @@ func main() {
 	serverImpl := api.NewServerImpl(grumbleController, timelineController, authController, vibeController)
 
 	// Setup Gin router
-	gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(cfg.GinMode)
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(cors.New(cors.Config{

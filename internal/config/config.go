@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Config holds all application configuration.
@@ -26,6 +28,7 @@ type Config struct {
 
 	// HTTP
 	CORSAllowedOrigins []string
+	GinMode            string
 
 	// Performance
 	DBMaxConns int
@@ -40,6 +43,7 @@ func LoadConfig() (*Config, error) {
 		FirebaseProjectID:       os.Getenv("FIREBASE_PROJECT_ID"),
 		FirebaseCredentialsFile: os.Getenv("FIREBASE_CREDENTIALS_FILE"),
 		CORSAllowedOrigins:      getEnvStringSlice("CORS_ALLOWED_ORIGINS", []string{"http://localhost:3000", "http://localhost:8081", "http://localhost:19006"}),
+		GinMode:                 getEnv("GIN_MODE", gin.ReleaseMode),
 		PurificationThreshold:   getEnvInt("PURIFICATION_THRESHOLD", 10),
 		DBMaxConns:              getEnvInt("DB_MAX_CONNS", 25),
 		DBMinConns:              getEnvInt("DB_MIN_CONNS", 5),
