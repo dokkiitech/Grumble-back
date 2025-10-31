@@ -273,8 +273,14 @@ make generate
 docker compose -f docker/docker-compose.yml up -d
 
 # 4. 環境変数設定
-export DATABASE_URL="postgres://grumble:grumble@localhost:5432/grumble?sslmode=disable"
-export GRUMBLE_HTTP_ADDR=":8080"
+cp .env.example .env
+# ※フロントエンドリポジトリ（../grumble/.env）と同じ Firebase プロジェクトを利用する場合は:
+# cp ../grumble/.env .env
+# Firebase サービスアカウントを配置
+# cp /path/to/service-account.json firebase_secrets.json
+# 必要に応じて .env を編集し、実環境の値を設定してください
+# zsh/bash の場合は以下で読み込みできます
+set -a; source .env; set +a
 
 # 5. DBマイグレーション実行
 go run ./cmd/migrate
@@ -282,6 +288,20 @@ go run ./cmd/migrate
 # 6. API サーバー起動
 go run ./cmd/api
 ```
+
+## API 認証
+
+- すべての保護されたエンドポイント（例: `/grumbles/{grumble_id}/vibes`, `/users/me`）は Firebase Authentication の ID トークンで認証します。
+- リクエストヘッダーに `Authorization: Bearer <Firebase ID Token>` を付与してください。
+- バックエンドでは Firebase Admin SDK を利用してトークンを検証し、`uid` から内部ユーザーIDを紐付けます。無効・期限切れのトークンは `401 UNAUTHORIZED` を返します。
+- `.env` で設定できる主な値:
+  - `DATABASE_URL`: PostgreSQL 接続先
+  - `GRUMBLE_HTTP_ADDR`: HTTP リッスンアドレス
+  - `FIREBASE_PROJECT_ID`: Firebase プロジェクトID（サービスアカウントがあれば自動検出）
+  - `FIREBASE_CREDENTIALS_FILE`: サービスアカウントJSONのパス（ADC利用時は空欄でも可）
+  - `CORS_ALLOWED_ORIGINS`: カンマ区切りで許可するオリジン（未設定時は `http://localhost:3000`,`http://localhost:8081`,`http://localhost:19006`）
+- ルート直下に `firebase_secrets.json` を配置すると自動検出されます（`.env` や `make local-api` で指定がない場合のデフォルト）。
+- Firebase Admin SDK を利用するため、ローカル開発ではサービスアカウントJSONをダウンロードし、`FIREBASE_CREDENTIALS_FILE` または `GOOGLE_APPLICATION_CREDENTIALS` でパスを指定してください。
 
 ## マイグレーションの運用
 

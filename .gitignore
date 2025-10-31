@@ -43,3 +43,6 @@ coverage.txt
 
 # Docker
 .dockerignore
+
+# firebase
+firebase_secrets.json
