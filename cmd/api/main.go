@@ -111,8 +111,9 @@ func main() {
 	// Initialize middleware
 	authMiddleware := middleware.NewAuthMiddleware(authClient, authAnonymousUC, logger)
 
-	// Create server implementation that combines all controllers
-	serverImpl := api.NewServerImpl(grumbleController, timelineController, authController, vibeController)
+	// Create strict server implementation that combines all controllers
+	strictServer := api.NewStrictControllerServer(grumbleController, timelineController, authController, vibeController, logger)
+	serverImpl := api.NewStrictHandler(strictServer, nil)
 
 	// Setup Gin router
 	gin.SetMode(cfg.GinMode)
