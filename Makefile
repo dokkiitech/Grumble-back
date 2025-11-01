@@ -13,7 +13,7 @@ __init_go__:
 __init_oapi_codegen__:
 	@if ! command -v oapi-codegen &> /dev/null; then \
 		echo "oapi-codegen not found, installing..."; \
-		go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@latest; \
+		go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest; \
 	else \
 		echo "oapi-codegen is already installed."; \
 	fi
