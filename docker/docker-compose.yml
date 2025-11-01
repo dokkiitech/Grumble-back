@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: grumble
       POSTGRES_PASSWORD: grumble
@@ -20,6 +21,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    restart: unless-stopped
     working_dir: /app
     command: go run ./cmd/api
     environment:
