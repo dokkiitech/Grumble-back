@@ -273,8 +273,10 @@ func buildTimelineFilter(base string, filter grumble.TimelineFilter) (string, []
 		argIdx++
 	}
 
-	if filter.ExcludePurified {
-		query += " AND is_purified = FALSE"
+	if filter.IsPurified != nil {
+		query += fmt.Sprintf(" AND is_purified = $%d", argIdx)
+		args = append(args, *filter.IsPurified)
+		argIdx++
 	}
 
 	if filter.ExcludeExpired {

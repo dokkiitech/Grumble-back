@@ -7,13 +7,13 @@ import (
 
 // TimelineFilter represents filtering options for timeline queries
 type TimelineFilter struct {
-	ToxicLevelMin   *shared.ToxicLevel // Minimum toxic level (inclusive)
-	ToxicLevelMax   *shared.ToxicLevel // Maximum toxic level (inclusive)
-	ExcludePurified bool               // Exclude purified grumbles
-	ExcludeExpired  bool               // Exclude expired grumbles
-	UserID          *shared.UserID     // Filter by author user ID
-	Limit           int                // Number of results to return
-	Offset          int                // Number of results to skip
+	ToxicLevelMin  *shared.ToxicLevel // Minimum toxic level (inclusive)
+	ToxicLevelMax  *shared.ToxicLevel // Maximum toxic level (inclusive)
+	IsPurified     *bool              // Restrict to a specific purification state when provided
+	ExcludeExpired bool               // Exclude expired grumbles
+	UserID         *shared.UserID     // Filter by author user ID
+	Limit          int                // Number of results to return
+	Offset         int                // Number of results to skip
 }
 
 // Repository defines the interface for grumble persistence

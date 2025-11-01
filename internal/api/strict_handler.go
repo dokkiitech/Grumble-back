@@ -92,12 +92,12 @@ func (s *StrictControllerServer) GetGrumbles(ctx context.Context, request GetGru
 	}
 
 	query := controller.TimelineQuery{
-		UserID:         userID,
-		ToxicLevelMin:  toxicLevelMin,
-		ToxicLevelMax:  toxicLevelMax,
-		UnpurifiedOnly: params.UnpurifiedOnly,
-		Limit:          limit,
-		Offset:         offset,
+		UserID:        userID,
+		ToxicLevelMin: toxicLevelMin,
+		ToxicLevelMax: toxicLevelMax,
+		IsPurified:    params.IsPurified,
+		Limit:         limit,
+		Offset:        offset,
 	}
 
 	result, err := s.timelineController.GetGrumbles(ctx, query)
