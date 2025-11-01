@@ -9,12 +9,12 @@ CREATE TABLE IF NOT EXISTS anonymous_users (
 
 CREATE TABLE IF NOT EXISTS grumbles (
     grumble_id UUID PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES anonymous_users(user_id),
-    content TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES anonymous_users(user_id) ON DELETE CASCADE,
+    content TEXT NOT NULL CHECK (length(content) <= 280),
     toxic_level INTEGER NOT NULL CHECK (toxic_level BETWEEN 1 AND 5),
     vibe_count INTEGER NOT NULL DEFAULT 0,
     is_purified BOOLEAN NOT NULL DEFAULT FALSE,
-    posted_at TIMESTAMPTZ NOT NULL,
+    posted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     expires_at TIMESTAMPTZ NOT NULL,
     is_event_grumble BOOLEAN NOT NULL DEFAULT FALSE
 );
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS grumbles (
 CREATE TABLE IF NOT EXISTS vibes (
     vibe_id BIGSERIAL PRIMARY KEY,
     grumble_id UUID NOT NULL REFERENCES grumbles(grumble_id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES anonymous_users(user_id),
+    user_id UUID NOT NULL REFERENCES anonymous_users(user_id) ON DELETE CASCADE,
     vibe_type VARCHAR(20) NOT NULL,
     voted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS polls (
 CREATE TABLE IF NOT EXISTS poll_votes (
     poll_vote_id BIGSERIAL PRIMARY KEY,
     poll_id BIGINT NOT NULL REFERENCES polls(poll_id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES anonymous_users(user_id),
+    user_id UUID NOT NULL REFERENCES anonymous_users(user_id) ON DELETE CASCADE,
     selected_option INTEGER NOT NULL CHECK (selected_option IN (1, 2))
 );
 

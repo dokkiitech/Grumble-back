@@ -93,7 +93,7 @@ grumble-backend/
 │  ├─ batch/
 │  │  └─ main.go                 # cronやジョブワーカー起動
 │  └─ migrate/
-│     └─ main.go                 # DBマイグレーションCLI（任意）
+│     └─ main.go                 # DBマイグレーションCLI
 │
 ├─ api/
 │  ├─ openapi/
@@ -106,122 +106,68 @@ grumble-backend/
 │     └─ client/
 │        └─ openapi_client.gen.go# 必要ならクライアント生成
 │
-├─ internal/
-│  ├─ controller/                # 入力境界（アプリ内IF：UseCase呼び出しの窓口）
-│  │  ├─ grumble_controller.go
-│  │  ├─ vibe_controller.go
-│  │  ├─ timeline_controller.go
-│  │  ├─ event_controller.go
-│  │  └─ auth_controller.go
+├─ internal/                     # シンプルなオニオンアーキテクチャ
+│  ├─ controller/                # コントローラー層（HTTPハンドラー）
+│  │  ├─ *_controller.go        # 各エンドポイントのコントローラー
+│  │  ├─ *_presenter.go         # レスポンスの整形
+│  │  ├─ dto/                    # リクエスト/レスポンスDTO
+│  │  ├─ middleware/             # 認証、ロギング、リカバリー等
+│  │  ├─ router/                 # ルーティング設定（Gin）
+│  │  └─ httpx/                  # HTTPユーティリティ
 │  │
-│  ├─ handler/                   # トランスポート層（HTTP）← OpenAPIの実体
-│  │  └─ http/
-│  │     ├─ dto/                 # I/O DTO（OpenAPI typesに薄ラップしてもOK）
-│  │     │  ├─ grumble_dto.go
-│  │     │  ├─ vibe_dto.go
-│  │     │  ├─ timeline_dto.go
-│  │     │  ├─ event_dto.go
-│  │     │  └─ auth_dto.go
-│  │     ├─ middleware/
-│  │     │  ├─ request_id.go
-│  │     │  ├─ logger.go
-│  │     │  ├─ recover.go
-│  │     │  ├─ auth_anonymous.go # 匿名認証(デバイス/セッションID)
-│  │     │  └─ ratelimit.go
-│  │     └─ router/
-│  │        ├─ gin/
-│  │        │  ├─ router.go      # Gin版
-│  │        │  └─ binder.go      # バインド/バリデーション設定
-│  │        └─ echo/             # Echo（現在はこちらを採用）
-│  │           ├─ router.go
-│  │           └─ binder.go
-│  │
-│  ├─ usecase/                   # アプリケーションユースケース（ビジネスフロー）
+│  ├─ usecase/                   # ユースケース層（ビジネスフロー）
 │  │  ├─ grumble_post.go         # BE-01 投稿
 │  │  ├─ vibe_add.go             # BE-02 共感
 │  │  ├─ timeline_get.go         # BE-03 タイムライン
-│  │  ├─ purify_check.go         # BE-04 成仏ロジック（しきい値判定）
+│  │  ├─ purify_check.go         # BE-04 成仏ロジック
 │  │  ├─ purge_expired.go        # BE-05 24h削除
 │  │  ├─ event_manage.go         # BE-06 イベント管理
 │  │  └─ auth_anonymous.go       # BE-07 匿名認証
 │  │
-│  ├─ domain/                    # ドメイン（エンティティ/値オブジェクト/ドメインサービス）
-│  │  ├─ entity/
-│  │  │  ├─ grumble.go
+│  ├─ domain/                    # ドメイン層（コアビジネスロジック）
+│  │  ├─ grumble/                # 愚痴ドメイン
+│  │  │  ├─ grumble.go           # エンティティ
+│  │  │  └─ repository.go        # リポジトリIF
+│  │  ├─ vibe/                   # 共感ドメイン
 │  │  │  ├─ vibe.go
+│  │  │  └─ repository.go
+│  │  ├─ user/                   # ユーザードメイン
 │  │  │  ├─ user.go
-│  │  │  ├─ poll.go              # 将来機能(現在はファイルのみ作成)
-│  │  │  └─ event.go
-│  │  ├─ value/
-│  │  │  ├─ toxic_level.go
-│  │  │  └─ ids.go               # ID生成/検証
-│  │  ├─ service/
-│  │  │  ├─ purify_service.go    # 成仏の判定/演出トリガー
-│  │  │  └─ virtue_service.go    # 徳ポイント加算/ランキング
-│  │  └─ error.go                # ドメインエラー型
+│  │  │  └─ repository.go
+│  │  ├─ event/                  # イベントドメイン
+│  │  │  ├─ event.go
+│  │  │  └─ repository.go
+│  │  ├─ poll/                   # 投票ドメイン（将来機能）
+│  │  │  ├─ poll.go
+│  │  │  └─ repository.go
+│  │  └─ shared/                 # ドメイン共通
+│  │     ├─ error.go             # ドメインエラー
+│  │     ├─ value.go             # 値オブジェクト（ID、ToxicLevel等）
+│  │     └─ service/             # ドメインサービス
+│  │        ├─ purify_service.go # 成仏判定
+│  │        └─ virtue_service.go # 徳ポイント
 │  │
-│  ├─ repository/                # Port（抽象）: UseCaseが依存するIF
-│  │  ├─ grumble_repo.go
-│  │  ├─ vibe_repo.go
-│  │  ├─ user_repo.go
-│  │  ├─ poll_repo.go
-│  │  └─ event_repo.go
+│  ├─ infrastructure/            # インフラ層（フラット構造）
+│  │  ├─ grumble_repository.go  # 愚痴リポジトリ実装
+│  │  ├─ vibe_repository.go     # 共感リポジトリ実装
+│  │  ├─ user_repository.go     # ユーザーリポジトリ実装
+│  │  ├─ event_repository.go    # イベントリポジトリ実装
+│  │  ├─ poll_repository.go     # 投票リポジトリ実装（将来）
+│  │  ├─ cron.go                # cronジョブ管理
+│  │  ├─ job_purify_check.go    # 成仏チェックジョブ
+│  │  ├─ job_purge_expired.go   # 期限切れ削除ジョブ
+│  │  └─ logger.go              # ロガー実装
 │  │
-│  ├─ infrastructure/            # Adapter（具体）: DB/Cache/Queueなど
-│  │  ├─ db/
-│  │  │  ├─ postgres/
-│  │  │  │  ├─ connection.go
-│  │  │  │  ├─ grumble_store.go  # repository.IFの実装
-│  │  │  │  ├─ vibe_store.go
-│  │  │  │  ├─ user_store.go
-│  │  │  │  ├─ poll_store.go
-│  │  │  │  └─ event_store.go
-│  │  │  └─ sql/
-│  │  │     ├─ queries/          # sqlcやプレーンSQLを置く場所（任意）
-│  │  │     └─ migrator.go
-│  │  ├─ cache/
-│  │  │  └─ redis_client.go      # タイムライン/ランキングキャッシュ（任意）
-│  │  ├─ queue/
-│  │  │  └─ asynq_client.go      # イベント/成仏演出などの非同期処理（任意）
-│  │  ├─ id/
-│  │  │  └─ uuid_generator.go
-│  │  ├─ auth/
-│  │  │  └─ anonymous_provider.go# 匿名ユーザーの発行/検証
-│  │  └─ clock/
-│  │     └─ clock.go             # 時刻抽象（テストしやすさ向上）
-│  │
-│  ├─ scheduler/                 # バッチ/cron/定期実行
-│  │  ├─ cron.go                 # robfig/cron v3など
-│  │  ├─ job_purify_check.go     # しきい値超過の成仏フラグ付与
-│  │  └─ job_purge_expired.go    # 24h超の削除
-│  │
-│  ├─ presenter/                 # 出力変換（DTO整形：ハンドラで使う）
-│  │  ├─ grumble_presenter.go
-│  │  ├─ timeline_presenter.go
-│  │  └─ event_presenter.go
-│  │
-│  └─ shared/
-│     ├─ config/
-│     │  ├─ config.go            # envやYAMLの読み込み
-│     │  └─ default.toml
-│     ├─ logger/
-│     │  └─ logger.go            # zap/log/slogなど
-│     ├─ httpx/
-│     │  ├─ error_response.go
-│     │  └─ responder.go
-│     └─ tracing/
-│        └─ otel.go              # OpenTelemetry（任意）
+│  └─ config/
+│     └─ config.go               # 設定管理（環境変数等）
 │
 ├─ migrations/
 │  ├─ 0001_init.sql              # AnonymousUser/Grumble/Vibe/Event…
 │  └─ 0002_indexes.sql
 │
-├─ deployments/
-│  ├─ docker/
-│    ├─ Dockerfile.api
-│    ├─ Dockerfile.batch
-│    ├─ docker-compose.dev.yml  # Postgres/Redis/Asynqmonなど
-│    └─ entrypoint.sh  
+├─ docker/
+│  ├─ Dockerfile
+│  └─ docker-compose.yml         # Postgres開発環境
 │
 ├─ Makefile
 ├─ go.mod
@@ -308,3 +254,104 @@ grumble-backend/
   - パスワード: grumble
   - データベース名: grumble
   - 接続文字列例: postgres://grumble:grumble@localhost:5432/grumble?sslmode=disable（DATABASE_URL と同じ）
+
+---
+
+# 開発環境セットアップ
+
+## Quick Start
+
+### 最短ルート（Makeコマンド）
+
+```bash
+# 事前準備（必須）
+cp .env.example .env   # 各値を環境に合わせて編集する
+# Firebase Admin SDK のサービスアカウントを配置
+# cp /path/to/service-account.json firebase_secrets.json
+
+# セットアップと起動
+make local-setup       # 依存関係の準備 + DB 起動 + マイグレーション
+make local-api         # API サーバーをローカルで起動
+```
+
+- `make local-setup`: `make init` → `make generate` → `make local-db-up` → `make local-migrate` を順に実行し、初期セットアップを一括で済ませます。
+- `make local-api`: `.env`（存在すれば）と `firebase_secrets.json` を読み込みつつ、`DATABASE_URL` や `GRUMBLE_HTTP_ADDR` のデフォルト値を補完して API サーバーを起動します。
+- `make local-down`: Docker のローカルサービスをまとめて停止します。作業を終える際に実行してください。
+- `make local-db-up` / `make local-db-down`: データベースだけを個別に起動・停止したい場合に利用します。
+- `make local-migrate`: `.sql` マイグレーションを手動で適用したいときに再実行できます。
+
+`.env` の作成と編集は必須です。Firebase Admin SDK のサービスアカウント（`firebase_secrets.json` など）をリポジトリ直下に配置するか、`.env` で `FIREBASE_CREDENTIALS_FILE` を指定してください。
+
+### 詳細手順（手動で実行する場合）
+
+```bash
+# 0. 環境変数設定（必須）
+cp .env.example .env
+# Firebase サービスアカウントを配置
+# cp /path/to/service-account.json firebase_secrets.json
+# 必要に応じて .env を編集し、実環境の値を設定してください
+# zsh/bash の場合は以下で読み込みできます
+set -a; source .env; set +a
+
+# 1. 依存関係のインストール
+make init
+
+# 2. OpenAPI仕様から Go コード生成
+# フロントエンドリポジトリ（github.com/dokkiitech/Grumble）から自動取得
+make generate
+
+# 3. データベース起動
+docker compose -f docker/docker-compose.yml up -d
+
+# 4. DBマイグレーション実行
+go run ./cmd/migrate
+
+# 5. API サーバー起動
+go run ./cmd/api
+```
+
+## API 認証
+
+- すべての保護されたエンドポイント（例: `/grumbles/{grumble_id}/vibes`, `/users/me`）は Firebase Authentication の ID トークンで認証します。
+- リクエストヘッダーに `Authorization: Bearer <Firebase ID Token>` を付与してください。
+- バックエンドでは Firebase Admin SDK を利用してトークンを検証し、`uid` から内部ユーザーIDを紐付けます。無効・期限切れのトークンは `401 UNAUTHORIZED` を返します。
+- `.env` で設定できる主な値:
+  - `DATABASE_URL`: PostgreSQL 接続先
+  - `GRUMBLE_HTTP_ADDR`: HTTP リッスンアドレス
+  - `FIREBASE_PROJECT_ID`: Firebase プロジェクトID（サービスアカウントがあれば自動検出）
+  - `FIREBASE_CREDENTIALS_FILE`: サービスアカウントJSONのパス（ADC利用時は空欄でも可）
+  - `GIN_MODE`: `release` / `debug` など Gin の動作モード（未設定時は `release`）
+  - `CORS_ALLOWED_ORIGINS`: カンマ区切りで許可するオリジン（未設定時は `http://localhost:3000`,`http://localhost:8081`,`http://localhost:19006`）
+- ルート直下に `firebase_secrets.json` を配置すると自動検出されます（`.env` や `make local-api` で指定がない場合のデフォルト）。
+- Firebase Admin SDK を利用するため、ローカル開発ではサービスアカウントJSONをダウンロードし、`FIREBASE_CREDENTIALS_FILE` または `GOOGLE_APPLICATION_CREDENTIALS` でパスを指定してください。
+
+## マイグレーションの運用
+
+- `go run ./cmd/migrate` は `migrations/*.sql` を適用し、`schema_migrations` テーブルで実行済みバージョンを管理します。
+- API を起動する前に一度実行してください（デプロイや CI/CD でも同様）。
+- SQL ファイルを追加したら、各環境でこの CLI を再実行するだけで差分が適用されます。
+
+## OpenAPI 仕様について
+
+**重要**: このバックエンドは独自の OpenAPI 仕様を持ちません。フロントエンドリポジトリの `openapi.yaml` を参照します。
+
+- **リポジトリ**: `git@github.com:dokkiitech/Grumble.git`
+- **ファイル**: `openapi.yaml`（ルートディレクトリ）
+- **コード生成**: `make generate` で自動的に読み込み
+
+詳細は `oapi-codegen/README.md` を参照してください。
+
+## ディレクトリ構造
+
+シンプルなオニオンアーキテクチャ（5層構成）：
+
+```
+internal/
+├── controller/      # HTTPハンドラー（Gin）
+├── usecase/         # ビジネスロジック
+├── domain/          # ドメインモデル（各ドメインごとにディレクトリ分割）
+├── infrastructure/  # DB、キャッシュ、ジョブ等
+└── config/          # 設定管理
+```
+
+詳細は `CLAUDE.md` を参照してください。
