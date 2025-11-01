@@ -285,34 +285,30 @@ func (r *PostgresGrumbleRepository) IncrementVibeCount(ctx context.Context, id s
 
 func buildTimelineFilter(base string, filter grumble.TimelineFilter, args []interface{}) (string, []interface{}) {
 	query := base
-	argIdx := len(args) + 1
 
-	if filter.UserID != nil {
-		query += fmt.Sprintf(" AND user_id = $%d", argIdx)
-		args = append(args, string(*filter.UserID))
-		argIdx++
+	addCondition := func(condition string, value interface{}) {
+		query += fmt.Sprintf(condition, len(args)+1)
+		args = append(args, value)
 	}
 
-	if filter.ExcludePurified {
-		query += " AND is_purified = FALSE"
+	if filter.UserID != nil {
+		addCondition(" AND user_id = $%d", string(*filter.UserID))
+	}
+
+	if filter.IsPurified != nil {
+		addCondition(" AND is_purified = $%d", *filter.IsPurified)
 	}
 
 	if filter.ExcludeExpired {
-		query += fmt.Sprintf(" AND expires_at > $%d", argIdx)
-		args = append(args, time.Now())
-		argIdx++
+		addCondition(" AND expires_at > $%d", time.Now())
 	}
 
 	if filter.ToxicLevelMin != nil {
-		query += fmt.Sprintf(" AND toxic_level >= $%d", argIdx)
-		args = append(args, *filter.ToxicLevelMin)
-		argIdx++
+		addCondition(" AND toxic_level >= $%d", *filter.ToxicLevelMin)
 	}
 
 	if filter.ToxicLevelMax != nil {
-		query += fmt.Sprintf(" AND toxic_level <= $%d", argIdx)
-		args = append(args, *filter.ToxicLevelMax)
-		argIdx++
+		addCondition(" AND toxic_level <= $%d", *filter.ToxicLevelMax)
 	}
 
 	return query, args

@@ -165,12 +165,14 @@ type GetEventsParams struct {
 // GetGrumblesParams defines parameters for GetGrumbles.
 type GetGrumblesParams struct {
 	// UserID 取得対象のユーザーID
-	UserID         *openapi_types.UUID `form:"user_id,omitempty" json:"user_id,omitempty"`
-	ToxicLevelMin  *int                `form:"toxic_level_min,omitempty" json:"toxic_level_min,omitempty"`
-	ToxicLevelMax  *int                `form:"toxic_level_max,omitempty" json:"toxic_level_max,omitempty"`
-	UnpurifiedOnly *bool               `form:"unpurified_only,omitempty" json:"unpurified_only,omitempty"`
-	Limit          *int                `form:"limit,omitempty" json:"limit,omitempty"`
-	Offset         *int                `form:"offset,omitempty" json:"offset,omitempty"`
+	UserID        *openapi_types.UUID `form:"user_id,omitempty" json:"user_id,omitempty"`
+	ToxicLevelMin *int                `form:"toxic_level_min,omitempty" json:"toxic_level_min,omitempty"`
+	ToxicLevelMax *int                `form:"toxic_level_max,omitempty" json:"toxic_level_max,omitempty"`
+
+	// IsPurified 成仏済みかどうかで絞り込み
+	IsPurified *bool `form:"is_purified,omitempty" json:"is_purified,omitempty"`
+	Limit      *int  `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset     *int  `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
 // AddVibeJSONBody defines parameters for AddVibe.
@@ -306,11 +308,11 @@ func (siw *ServerInterfaceWrapper) GetGrumbles(c *gin.Context) {
 		return
 	}
 
-	// ------------- Optional query parameter "unpurified_only" -------------
+	// ------------- Optional query parameter "is_purified" -------------
 
-	err = runtime.BindQueryParameter("form", true, false, "unpurified_only", c.Request.URL.Query(), &params.UnpurifiedOnly)
+	err = runtime.BindQueryParameter("form", true, false, "is_purified", c.Request.URL.Query(), &params.IsPurified)
 	if err != nil {
-		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter unpurified_only: %w", err), http.StatusBadRequest)
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter is_purified: %w", err), http.StatusBadRequest)
 		return
 	}
 
