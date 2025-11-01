@@ -4,11 +4,10 @@ This directory contains the configuration for generating Go server code from the
 
 ## OpenAPI Specification Source
 
-**Important**: This backend does NOT maintain its own OpenAPI specification. Instead, it uses the OpenAPI spec from the frontend repository:
+The OpenAPI specification is managed in this repository:
 
-- **Repository**: `git@github.com:dokkiitech/Grumble.git`
-- **File**: `openapi.yaml` (in the root of frontend repo)
-- **GitHub URL**: https://raw.githubusercontent.com/dokkiitech/Grumble/main/openapi.yaml
+- **File**: `openapi.yaml` (in the root of this repository)
+- The spec was originally from the frontend repository but is now maintained here
 
 ## Code Generation
 
@@ -29,9 +28,8 @@ make generate
 ```
 
 This command will:
-1. Look for `../Grumble/openapi.yaml` (if frontend repo is cloned as a sibling directory)
-2. If not found, download the OpenAPI spec from GitHub
-3. Generate Go server code using the configuration in `api.yml`
+1. Check if `openapi.yaml` exists in the root directory
+2. Generate Go server code using the configuration in `api.yml`
 
 ### Generated Output
 
@@ -68,22 +66,20 @@ Grumble-back/
 
 ## Development Workflow
 
-1. Frontend team updates `openapi.yaml` in the Grumble repository
-2. Backend team runs `make generate` to regenerate server code
+1. Update `openapi.yaml` in the root directory
+2. Run `make generate` to regenerate server code
 3. Implement the server interface methods in `internal/controller/`
 
 ## Important Notes
 
 - **DO NOT edit** `internal/api/api.gen.go` manually - it will be overwritten
-- The OpenAPI spec is the single source of truth, maintained by the frontend team
+- The OpenAPI spec is the single source of truth
 - Always regenerate code after OpenAPI spec changes
-- If the frontend repo structure changes, update `OPENAPI_FILE` in Makefile
 
 ## Troubleshooting
 
-### "Local OpenAPI file not found"
-- Ensure the Grumble frontend repository is cloned as a sibling directory
-- Or the command will automatically download from GitHub
+### "OpenAPI file not found"
+- Ensure `openapi.yaml` exists in the root directory of this repository
 
 ### "oapi-codegen: command not found"
 ```bash
@@ -92,5 +88,4 @@ make init
 
 ### Generation fails
 - Check that the OpenAPI spec is valid YAML
-- Verify the GitHub URL is accessible
 - Ensure you're using oapi-codegen v2

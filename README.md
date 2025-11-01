@@ -93,7 +93,7 @@ grumble-backend/
 │  ├─ batch/
 │  │  └─ main.go                 # cronやジョブワーカー起動
 │  └─ migrate/
-│     └─ main.go                 # DBマイグレーションCLI（任意）
+│     └─ main.go                 # DBマイグレーションCLI
 │
 ├─ api/
 │  ├─ openapi/
@@ -261,7 +261,38 @@ grumble-backend/
 
 ## Quick Start
 
+### 最短ルート（Makeコマンド）
+
 ```bash
+# 事前準備（必須）
+cp .env.example .env   # 各値を環境に合わせて編集する
+# Firebase Admin SDK のサービスアカウントを配置
+# cp /path/to/service-account.json firebase_secrets.json
+
+# セットアップと起動
+make local-setup       # 依存関係の準備 + DB 起動 + マイグレーション
+make local-api         # API サーバーをローカルで起動
+```
+
+- `make local-setup`: `make init` → `make generate` → `make local-db-up` → `make local-migrate` を順に実行し、初期セットアップを一括で済ませます。
+- `make local-api`: `.env`（存在すれば）と `firebase_secrets.json` を読み込みつつ、`DATABASE_URL` や `GRUMBLE_HTTP_ADDR` のデフォルト値を補完して API サーバーを起動します。
+- `make local-down`: Docker のローカルサービスをまとめて停止します。作業を終える際に実行してください。
+- `make local-db-up` / `make local-db-down`: データベースだけを個別に起動・停止したい場合に利用します。
+- `make local-migrate`: `.sql` マイグレーションを手動で適用したいときに再実行できます。
+
+`.env` の作成と編集は必須です。Firebase Admin SDK のサービスアカウント（`firebase_secrets.json` など）をリポジトリ直下に配置するか、`.env` で `FIREBASE_CREDENTIALS_FILE` を指定してください。
+
+### 詳細手順（手動で実行する場合）
+
+```bash
+# 0. 環境変数設定（必須）
+cp .env.example .env
+# Firebase サービスアカウントを配置
+# cp /path/to/service-account.json firebase_secrets.json
+# 必要に応じて .env を編集し、実環境の値を設定してください
+# zsh/bash の場合は以下で読み込みできます
+set -a; source .env; set +a
+
 # 1. 依存関係のインストール
 make init
 
@@ -272,13 +303,33 @@ make generate
 # 3. データベース起動
 docker compose -f docker/docker-compose.yml up -d
 
-# 4. 環境変数設定
-export DATABASE_URL="postgres://grumble:grumble@localhost:5432/grumble?sslmode=disable"
-export GRUMBLE_HTTP_ADDR=":8080"
+# 4. DBマイグレーション実行
+go run ./cmd/migrate
 
-# 5. API サーバー起動（マイグレーション自動実行）
+# 5. API サーバー起動
 go run ./cmd/api
 ```
+
+## API 認証
+
+- すべての保護されたエンドポイント（例: `/grumbles/{grumble_id}/vibes`, `/users/me`）は Firebase Authentication の ID トークンで認証します。
+- リクエストヘッダーに `Authorization: Bearer <Firebase ID Token>` を付与してください。
+- バックエンドでは Firebase Admin SDK を利用してトークンを検証し、`uid` から内部ユーザーIDを紐付けます。無効・期限切れのトークンは `401 UNAUTHORIZED` を返します。
+- `.env` で設定できる主な値:
+  - `DATABASE_URL`: PostgreSQL 接続先
+  - `GRUMBLE_HTTP_ADDR`: HTTP リッスンアドレス
+  - `FIREBASE_PROJECT_ID`: Firebase プロジェクトID（サービスアカウントがあれば自動検出）
+  - `FIREBASE_CREDENTIALS_FILE`: サービスアカウントJSONのパス（ADC利用時は空欄でも可）
+  - `GIN_MODE`: `release` / `debug` など Gin の動作モード（未設定時は `release`）
+  - `CORS_ALLOWED_ORIGINS`: カンマ区切りで許可するオリジン（未設定時は `http://localhost:3000`,`http://localhost:8081`,`http://localhost:19006`）
+- ルート直下に `firebase_secrets.json` を配置すると自動検出されます（`.env` や `make local-api` で指定がない場合のデフォルト）。
+- Firebase Admin SDK を利用するため、ローカル開発ではサービスアカウントJSONをダウンロードし、`FIREBASE_CREDENTIALS_FILE` または `GOOGLE_APPLICATION_CREDENTIALS` でパスを指定してください。
+
+## マイグレーションの運用
+
+- `go run ./cmd/migrate` は `migrations/*.sql` を適用し、`schema_migrations` テーブルで実行済みバージョンを管理します。
+- API を起動する前に一度実行してください（デプロイや CI/CD でも同様）。
+- SQL ファイルを追加したら、各環境でこの CLI を再実行するだけで差分が適用されます。
 
 ## OpenAPI 仕様について
 

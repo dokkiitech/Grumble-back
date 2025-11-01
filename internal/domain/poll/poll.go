@@ -1,3 +1,5 @@
+//go:build ignore
+
 package model
 
 // Poll は投稿に紐づく二択投票（将来機能）。
