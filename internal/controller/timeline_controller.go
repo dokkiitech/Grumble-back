@@ -33,6 +33,7 @@ func NewTimelineController(
 // TimelineQuery represents filters supplied by the HTTP layer.
 type TimelineQuery struct {
 	UserID         *shared.UserID
+	ViewerUserID   *shared.UserID
 	ToxicLevelMin  *shared.ToxicLevel
 	ToxicLevelMax  *shared.ToxicLevel
 	UnpurifiedOnly *bool
@@ -62,6 +63,7 @@ func (ctrl *TimelineController) GetGrumbles(ctx context.Context, query TimelineQ
 		ToxicLevelMax:  query.ToxicLevelMax,
 		UnpurifiedOnly: query.UnpurifiedOnly,
 		UserID:         query.UserID,
+		ViewerUserID:   query.ViewerUserID,
 		Page:           page,
 		PageSize:       pageSize,
 		Offset:         offset,

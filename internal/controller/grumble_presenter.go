@@ -50,7 +50,7 @@ func (p *GrumblePresenter) ToAPIGrumble(g *grumble.Grumble) (*GrumbleResponse, e
 		PostedAt:       g.PostedAt,
 		ExpiresAt:      g.ExpiresAt,
 		IsEventGrumble: g.IsEventGrumble,
-		HasVibed:       nil,
+		HasVibed:       g.HasVibed,
 	}, nil
 }
 

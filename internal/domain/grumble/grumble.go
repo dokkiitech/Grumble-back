@@ -17,6 +17,7 @@ type Grumble struct {
 	PostedAt       time.Time
 	ExpiresAt      time.Time
 	IsEventGrumble bool
+	HasVibed       *bool
 }
 
 // Validate checks if the grumble meets business rules
