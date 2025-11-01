@@ -12,6 +12,7 @@ type TimelineFilter struct {
 	IsPurified     *bool              // Restrict to a specific purification state when provided
 	ExcludeExpired bool               // Exclude expired grumbles
 	UserID         *shared.UserID     // Filter by author user ID
+	ViewerUserID   *shared.UserID     // Authenticated viewer for vibe state
 	Limit          int                // Number of results to return
 	Offset         int                // Number of results to skip
 }
