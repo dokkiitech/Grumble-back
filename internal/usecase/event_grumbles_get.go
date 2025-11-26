@@ -6,17 +6,20 @@ import (
 
 	"github.com/dokkiitech/grumble-back/internal/domain/grumble"
 	"github.com/dokkiitech/grumble-back/internal/domain/shared"
+	sharedservice "github.com/dokkiitech/grumble-back/internal/domain/shared/service"
 )
 
 // EventGrumblesGetUseCase handles retrieving event grumbles from archive
 type EventGrumblesGetUseCase struct {
-	grumbleRepo grumble.Repository
+	grumbleRepo  grumble.Repository
+	eventTimeSvc *sharedservice.EventTimeService
 }
 
 // NewEventGrumblesGetUseCase creates a new EventGrumblesGetUseCase
-func NewEventGrumblesGetUseCase(grumbleRepo grumble.Repository) *EventGrumblesGetUseCase {
+func NewEventGrumblesGetUseCase(grumbleRepo grumble.Repository, eventTimeSvc *sharedservice.EventTimeService) *EventGrumblesGetUseCase {
 	return &EventGrumblesGetUseCase{
-		grumbleRepo: grumbleRepo,
+		grumbleRepo:  grumbleRepo,
+		eventTimeSvc: eventTimeSvc,
 	}
 }
 
@@ -42,7 +45,7 @@ func (uc *EventGrumblesGetUseCase) Get(ctx context.Context, req EventGrumblesReq
 	now := time.Now()
 
 	// イベント期間中かチェック（24:00〜12:00）
-	if !shared.IsEventTimeWindow(now) {
+	if !uc.eventTimeSvc.IsEventTimeWindow(now) {
 		// イベント期間外の場合、空のレスポンスを返す
 		return &EventGrumblesResponse{
 			Grumbles:      []*grumble.Grumble{},
@@ -53,7 +56,7 @@ func (uc *EventGrumblesGetUseCase) Get(ctx context.Context, req EventGrumblesReq
 	}
 
 	// イベント対象日を取得（前日）
-	targetDate := shared.GetEventTargetDate(now)
+	targetDate := uc.eventTimeSvc.GetEventTargetDate(now)
 
 	// フィルタ構築
 	filter := grumble.TimelineFilter{

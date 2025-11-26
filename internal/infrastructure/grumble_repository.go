@@ -7,18 +7,23 @@ import (
 
 	"github.com/dokkiitech/grumble-back/internal/domain/grumble"
 	"github.com/dokkiitech/grumble-back/internal/domain/shared"
+	sharedservice "github.com/dokkiitech/grumble-back/internal/domain/shared/service"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // PostgresGrumbleRepository implements grumble.Repository using PostgreSQL
 type PostgresGrumbleRepository struct {
-	db *pgxpool.Pool
+	db           *pgxpool.Pool
+	eventTimeSvc *sharedservice.EventTimeService
 }
 
 // NewPostgresGrumbleRepository creates a new PostgresGrumbleRepository
-func NewPostgresGrumbleRepository(db *pgxpool.Pool) *PostgresGrumbleRepository {
-	return &PostgresGrumbleRepository{db: db}
+func NewPostgresGrumbleRepository(db *pgxpool.Pool, eventTimeSvc *sharedservice.EventTimeService) *PostgresGrumbleRepository {
+	return &PostgresGrumbleRepository{
+		db:           db,
+		eventTimeSvc: eventTimeSvc,
+	}
 }
 
 // Create stores a new grumble
@@ -309,7 +314,7 @@ func (r *PostgresGrumbleRepository) FindArchivedTimeline(
 	targetDate time.Time,
 ) ([]*grumble.Grumble, error) {
 	// 対象日の00:00〜23:59を取得
-	dayStart, dayEnd := shared.GetDayBounds(targetDate)
+	dayStart, dayEnd := r.eventTimeSvc.GetDayBounds(targetDate)
 
 	baseQuery := `
 		SELECT grumble_id, user_id, content, toxic_level, vibe_count,
@@ -395,7 +400,7 @@ func (r *PostgresGrumbleRepository) CountArchivedTimeline(
 	filter grumble.TimelineFilter,
 	targetDate time.Time,
 ) (int, error) {
-	dayStart, dayEnd := shared.GetDayBounds(targetDate)
+	dayStart, dayEnd := r.eventTimeSvc.GetDayBounds(targetDate)
 
 	query := `
 		SELECT COUNT(*)
