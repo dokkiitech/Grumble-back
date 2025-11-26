@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/dokkiitech/grumble-back/internal/controller"
 	"github.com/dokkiitech/grumble-back/internal/domain/shared"
@@ -16,11 +17,12 @@ import (
 
 // StrictControllerServer bridges HTTP layer and application controllers using the strict server interface.
 type StrictControllerServer struct {
-	grumbleController  *controller.GrumbleController
-	timelineController *controller.TimelineController
-	authController     *controller.AuthController
-	vibeController     *controller.VibeController
-	logger             logging.Logger
+	grumbleController       *controller.GrumbleController
+	timelineController      *controller.TimelineController
+	authController          *controller.AuthController
+	vibeController          *controller.VibeController
+	eventGrumblesController *controller.EventGrumblesController
+	logger                  logging.Logger
 }
 
 // NewStrictControllerServer constructs a StrictServerInterface backed by existing controllers.
@@ -29,14 +31,16 @@ func NewStrictControllerServer(
 	timelineCtrl *controller.TimelineController,
 	authCtrl *controller.AuthController,
 	vibeCtrl *controller.VibeController,
+	eventGrumblesCtrl *controller.EventGrumblesController,
 	logger logging.Logger,
 ) *StrictControllerServer {
 	return &StrictControllerServer{
-		grumbleController:  grumbleCtrl,
-		timelineController: timelineCtrl,
-		authController:     authCtrl,
-		vibeController:     vibeCtrl,
-		logger:             logger,
+		grumbleController:       grumbleCtrl,
+		timelineController:      timelineCtrl,
+		authController:          authCtrl,
+		vibeController:          vibeCtrl,
+		eventGrumblesController: eventGrumblesCtrl,
+		logger:                  logger,
 	}
 }
 
@@ -48,6 +52,66 @@ func (s *StrictControllerServer) GetEvents(ctx context.Context, _ GetEventsReque
 // GetEvent is currently not implemented.
 func (s *StrictControllerServer) GetEvent(ctx context.Context, _ GetEventRequestObject) (GetEventResponseObject, error) {
 	return nil, errors.New("GetEvent not implemented")
+}
+
+// GetEventGrumbles handles retrieving event grumbles from archive
+func (s *StrictControllerServer) GetEventGrumbles(ctx context.Context, request GetEventGrumblesRequestObject) (GetEventGrumblesResponseObject, error) {
+	params := request.Params
+
+	limit := 20
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+
+	offset := 0
+	if params.Offset != nil {
+		offset = *params.Offset
+	}
+
+	query := controller.EventGrumblesQuery{
+		ToxicLevelMin: params.ToxicLevelMin,
+		ToxicLevelMax: params.ToxicLevelMax,
+		Limit:         limit,
+		Offset:        offset,
+	}
+
+	response, err := s.eventGrumblesController.GetEventGrumbles(ctx, query)
+	if err != nil {
+		s.logger.ErrorContext(ctx, "GetEventGrumbles failed", "error", err)
+		return GetEventGrumbles401JSONResponse(errorResponse("INTERNAL_ERROR", "Failed to retrieve event grumbles")), nil
+	}
+
+	// Convert controller response to OpenAPI response
+	apiGrumbles := make([]Grumble, len(response.Grumbles))
+	for i, g := range response.Grumbles {
+		apiGrumbles[i] = Grumble{
+			GrumbleID:      g.GrumbleID,
+			UserID:         g.UserID,
+			Content:        g.Content,
+			ToxicLevel:     g.ToxicLevel,
+			VibeCount:      g.VibeCount,
+			IsPurified:     g.IsPurified,
+			PostedAt:       g.PostedAt,
+			ExpiresAt:      g.ExpiresAt,
+			IsEventGrumble: g.IsEventGrumble,
+			HasVibed:       g.HasVibed,
+		}
+	}
+
+	eventDate := openapi_types.Date{}
+	if response.EventDate != "" {
+		parsedTime, err := time.Parse("2006-01-02", response.EventDate)
+		if err == nil {
+			eventDate = openapi_types.Date{Time: parsedTime}
+		}
+	}
+
+	return GetEventGrumbles200JSONResponse{
+		Grumbles:      apiGrumbles,
+		Total:         response.Total,
+		IsEventActive: response.IsEventActive,
+		EventDate:     eventDate,
+	}, nil
 }
 
 // GetGrumbles handles the timeline retrieval.

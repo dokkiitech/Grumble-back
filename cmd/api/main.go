@@ -85,6 +85,7 @@ func main() {
 	// Initialize use cases
 	grumblePostUC := usecase.NewGrumblePostUseCase(grumbleRepo)
 	timelineGetUC := usecase.NewTimelineGetUseCase(grumbleRepo)
+	eventGrumblesGetUC := usecase.NewEventGrumblesGetUseCase(grumbleRepo)
 	authAnonymousUC := usecase.NewAuthAnonymousUseCase(userRepo)
 	userQueryUC := usecase.NewUserQueryUseCase(userRepo)
 	purifyService := sharedservice.NewPurifyService(cfg.PurificationThreshold)
@@ -98,6 +99,7 @@ func main() {
 	// Initialize controllers
 	grumbleController := controller.NewGrumbleController(grumblePostUC, grumblePresenter, logger)
 	timelineController := controller.NewTimelineController(timelineGetUC, timelinePresenter, logger)
+	eventGrumblesController := controller.NewEventGrumblesController(eventGrumblesGetUC, grumblePresenter, logger)
 	authController := controller.NewAuthController(
 		authAnonymousUC,
 		userQueryUC,
@@ -112,7 +114,7 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(authClient, authAnonymousUC, logger)
 
 	// Create strict server implementation that combines all controllers
-	strictServer := api.NewStrictControllerServer(grumbleController, timelineController, authController, vibeController, logger)
+	strictServer := api.NewStrictControllerServer(grumbleController, timelineController, authController, vibeController, eventGrumblesController, logger)
 	serverImpl := api.NewStrictHandler(strictServer, nil)
 
 	// Setup Gin router

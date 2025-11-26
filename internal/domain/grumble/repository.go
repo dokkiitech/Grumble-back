@@ -2,6 +2,8 @@ package grumble
 
 import (
 	"context"
+	"time"
+
 	"github.com/dokkiitech/grumble-back/internal/domain/shared"
 )
 
@@ -33,8 +35,8 @@ type Repository interface {
 	// Update updates an existing grumble
 	Update(ctx context.Context, grumble *Grumble) error
 
-	// DeleteExpired removes all grumbles past their expiration time
-	DeleteExpired(ctx context.Context) (int, error)
+	// ArchiveExpired moves expired grumbles to archive table and removes them from main table
+	ArchiveExpired(ctx context.Context) (int, error)
 
 	// FindPurificationCandidates finds grumbles that meet purification threshold
 	// but are not yet purified
@@ -42,4 +44,10 @@ type Repository interface {
 
 	// IncrementVibeCount atomically increments the vibe count for a grumble
 	IncrementVibeCount(ctx context.Context, id shared.GrumbleID) error
+
+	// FindArchivedTimeline retrieves grumbles from archive table for a specific date
+	FindArchivedTimeline(ctx context.Context, filter TimelineFilter, targetDate time.Time) ([]*Grumble, error)
+
+	// CountArchivedTimeline returns the total count of archived grumbles for a specific date
+	CountArchivedTimeline(ctx context.Context, filter TimelineFilter, targetDate time.Time) (int, error)
 }

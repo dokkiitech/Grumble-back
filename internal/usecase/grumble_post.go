@@ -41,7 +41,7 @@ func (uc *GrumblePostUseCase) Post(ctx context.Context, req PostGrumbleRequest) 
 		VibeCount:      0,
 		IsPurified:     false,
 		PostedAt:       now,
-		ExpiresAt:      now.Add(24 * time.Hour), // 24B��k��Jd
+		ExpiresAt:      shared.CalculateNextMidnight(now), // 翌日の00:00
 		IsEventGrumble: req.IsEventGrumble,
 	}
 

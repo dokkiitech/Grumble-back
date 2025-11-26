@@ -21,9 +21,9 @@ func NewPurgeExpiredUseCase(grumbleRepo grumble.Repository, logger logging.Logge
 	}
 }
 
-// Purge deletes all expired grumbles (past 24 hours)
+// Purge archives and deletes all expired grumbles (past midnight)
 func (uc *PurgeExpiredUseCase) Purge(ctx context.Context) (int, error) {
-	count, err := uc.grumbleRepo.DeleteExpired(ctx)
+	count, err := uc.grumbleRepo.ArchiveExpired(ctx)
 	if err != nil {
 		uc.logger.ErrorContext(ctx, "Failed to purge expired grumbles", "error", err)
 		return 0, err
