@@ -200,10 +200,9 @@ components:
           minimum: 1
           maximum: 5
           description: 毒レベルの最大値
-        unpurified_only:
+        is_purified:
           type: boolean
-          default: false
-          description: 未成仏のみ表示
+          description: 成仏済みかどうかで絞り込み（未指定の場合はすべて）
         limit:
           type: integer
           minimum: 1
@@ -257,11 +256,11 @@ paths:
             type: integer
             minimum: 1
             maximum: 5
-        - name: unpurified_only
+        - name: is_purified
           in: query
           schema:
             type: boolean
-            default: false
+          description: 成仏済みかどうかで絞り込み
         - name: limit
           in: query
           schema:

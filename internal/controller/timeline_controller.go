@@ -32,12 +32,13 @@ func NewTimelineController(
 
 // TimelineQuery represents filters supplied by the HTTP layer.
 type TimelineQuery struct {
-	UserID         *shared.UserID
-	ToxicLevelMin  *shared.ToxicLevel
-	ToxicLevelMax  *shared.ToxicLevel
-	UnpurifiedOnly *bool
-	Limit          int
-	Offset         int
+	UserID        *shared.UserID
+	ViewerUserID  *shared.UserID
+	ToxicLevelMin *shared.ToxicLevel
+	ToxicLevelMax *shared.ToxicLevel
+	IsPurified    *bool
+	Limit         int
+	Offset        int
 }
 
 // GetGrumbles retrieves the timeline and returns the API-facing response model.
@@ -58,13 +59,14 @@ func (ctrl *TimelineController) GetGrumbles(ctx context.Context, query TimelineQ
 	}
 
 	req := usecase.TimelineRequest{
-		ToxicLevelMin:  query.ToxicLevelMin,
-		ToxicLevelMax:  query.ToxicLevelMax,
-		UnpurifiedOnly: query.UnpurifiedOnly,
-		UserID:         query.UserID,
-		Page:           page,
-		PageSize:       pageSize,
-		Offset:         offset,
+		ToxicLevelMin: query.ToxicLevelMin,
+		ToxicLevelMax: query.ToxicLevelMax,
+		IsPurified:    query.IsPurified,
+		UserID:        query.UserID,
+		ViewerUserID:  query.ViewerUserID,
+		Page:          page,
+		PageSize:      pageSize,
+		Offset:        offset,
 	}
 
 	resp, err := ctrl.timelineGetUC.Get(ctx, req)

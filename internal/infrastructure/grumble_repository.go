@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -81,13 +82,24 @@ func (r *PostgresGrumbleRepository) FindByID(ctx context.Context, id shared.Grum
 
 // FindTimeline retrieves grumbles for the timeline with filtering
 func (r *PostgresGrumbleRepository) FindTimeline(ctx context.Context, filter grumble.TimelineFilter) ([]*grumble.Grumble, error) {
+	args := []interface{}{}
 	baseQuery := `
-		SELECT grumble_id, user_id, content, toxic_level, vibe_count,
-		       is_purified, posted_at, expires_at, is_event_grumble
-		FROM grumbles
+		SELECT g.grumble_id, g.user_id, g.content, g.toxic_level, g.vibe_count,
+		       g.is_purified, g.posted_at, g.expires_at, g.is_event_grumble`
+	if filter.ViewerUserID != nil {
+		baseQuery += fmt.Sprintf(", EXISTS (SELECT 1 FROM vibes v WHERE v.grumble_id = g.grumble_id AND v.user_id = $%d) AS has_vibed", len(args)+1)
+		args = append(args, string(*filter.ViewerUserID))
+	} else {
+		baseQuery += ", NULL AS has_vibed"
+	}
+	baseQuery += `
+		FROM grumbles g
 		WHERE 1=1
 	`
-	query, args, argIdx := buildTimelineFilter(baseQuery, filter)
+
+	query, args := buildTimelineFilter(baseQuery, filter, args)
+
+	argIdx := len(args) + 1
 
 	// Order by most recent first
 	query += " ORDER BY posted_at DESC"
@@ -115,16 +127,24 @@ func (r *PostgresGrumbleRepository) FindTimeline(ctx context.Context, filter gru
 
 	var grumbles []*grumble.Grumble
 	for rows.Next() {
-		var g grumble.Grumble
+		var (
+			g        grumble.Grumble
+			hasVibed sql.NullBool
+		)
 		err := rows.Scan(
 			&g.GrumbleID, &g.UserID, &g.Content, &g.ToxicLevel, &g.VibeCount,
 			&g.IsPurified, &g.PostedAt, &g.ExpiresAt, &g.IsEventGrumble,
+			&hasVibed,
 		)
 		if err != nil {
 			return nil, &shared.InternalError{
 				Message: "failed to scan grumble",
 				Err:     err,
 			}
+		}
+		if hasVibed.Valid {
+			value := hasVibed.Bool
+			g.HasVibed = &value
 		}
 		grumbles = append(grumbles, &g)
 	}
@@ -141,8 +161,9 @@ func (r *PostgresGrumbleRepository) FindTimeline(ctx context.Context, filter gru
 
 // CountTimeline returns the total count of grumbles matching the filter
 func (r *PostgresGrumbleRepository) CountTimeline(ctx context.Context, filter grumble.TimelineFilter) (int, error) {
+	args := []interface{}{}
 	baseQuery := "SELECT COUNT(*) FROM grumbles WHERE 1=1"
-	query, args, _ := buildTimelineFilter(baseQuery, filter)
+	query, args := buildTimelineFilter(baseQuery, filter, args)
 
 	var count int
 	err := r.db.QueryRow(ctx, query, args...).Scan(&count)
@@ -307,6 +328,7 @@ func (r *PostgresGrumbleRepository) IncrementVibeCount(ctx context.Context, id s
 	return nil
 }
 
+
 // FindArchivedTimeline retrieves grumbles from archive table for a specific date
 func (r *PostgresGrumbleRepository) FindArchivedTimeline(
 	ctx context.Context,
@@ -439,38 +461,34 @@ func (r *PostgresGrumbleRepository) CountArchivedTimeline(
 	return count, nil
 }
 
-func buildTimelineFilter(base string, filter grumble.TimelineFilter) (string, []interface{}, int) {
-	query := base
-	args := []interface{}{}
-	argIdx := 1
+func buildTimelineFilter(base string, filter grumble.TimelineFilter, args []interface{}) (string, []interface{}) {
 
-	if filter.UserID != nil {
-		query += fmt.Sprintf(" AND user_id = $%d", argIdx)
-		args = append(args, string(*filter.UserID))
-		argIdx++
+	query := base
+
+	addCondition := func(condition string, value interface{}) {
+		query += fmt.Sprintf(condition, len(args)+1)
+		args = append(args, value)
 	}
 
-	if filter.ExcludePurified {
-		query += " AND is_purified = FALSE"
+	if filter.UserID != nil {
+		addCondition(" AND user_id = $%d", string(*filter.UserID))
+	}
+
+	if filter.IsPurified != nil {
+		addCondition(" AND is_purified = $%d", *filter.IsPurified)
 	}
 
 	if filter.ExcludeExpired {
-		query += fmt.Sprintf(" AND expires_at > $%d", argIdx)
-		args = append(args, time.Now())
-		argIdx++
+		addCondition(" AND expires_at > $%d", time.Now())
 	}
 
 	if filter.ToxicLevelMin != nil {
-		query += fmt.Sprintf(" AND toxic_level >= $%d", argIdx)
-		args = append(args, *filter.ToxicLevelMin)
-		argIdx++
+		addCondition(" AND toxic_level >= $%d", *filter.ToxicLevelMin)
 	}
 
 	if filter.ToxicLevelMax != nil {
-		query += fmt.Sprintf(" AND toxic_level <= $%d", argIdx)
-		args = append(args, *filter.ToxicLevelMax)
-		argIdx++
+		addCondition(" AND toxic_level <= $%d", *filter.ToxicLevelMax)
 	}
 
-	return query, args, argIdx
+	return query, args
 }

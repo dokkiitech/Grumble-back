@@ -155,13 +155,20 @@ func (s *StrictControllerServer) GetGrumbles(ctx context.Context, request GetGru
 		offset = *params.Offset
 	}
 
+	var viewerUserID *shared.UserID
+	if id, ok := s.userIDFromContext(ctx); ok {
+		viewer := id
+		viewerUserID = &viewer
+	}
+
 	query := controller.TimelineQuery{
-		UserID:         userID,
-		ToxicLevelMin:  toxicLevelMin,
-		ToxicLevelMax:  toxicLevelMax,
-		UnpurifiedOnly: params.UnpurifiedOnly,
-		Limit:          limit,
-		Offset:         offset,
+		UserID:        userID,
+		ViewerUserID:  viewerUserID,
+		ToxicLevelMin: toxicLevelMin,
+		ToxicLevelMax: toxicLevelMax,
+		IsPurified:    params.IsPurified,
+		Limit:         limit,
+		Offset:        offset,
 	}
 
 	result, err := s.timelineController.GetGrumbles(ctx, query)
