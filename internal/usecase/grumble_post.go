@@ -6,18 +6,21 @@ import (
 
 	"github.com/dokkiitech/grumble-back/internal/domain/grumble"
 	"github.com/dokkiitech/grumble-back/internal/domain/shared"
+	sharedservice "github.com/dokkiitech/grumble-back/internal/domain/shared/service"
 	"github.com/google/uuid"
 )
 
 // GrumblePostUseCase handles posting new grumbles
 type GrumblePostUseCase struct {
-	grumbleRepo grumble.Repository
+	grumbleRepo  grumble.Repository
+	eventTimeSvc *sharedservice.EventTimeService
 }
 
 // NewGrumblePostUseCase creates a new GrumblePostUseCase
-func NewGrumblePostUseCase(grumbleRepo grumble.Repository) *GrumblePostUseCase {
+func NewGrumblePostUseCase(grumbleRepo grumble.Repository, eventTimeSvc *sharedservice.EventTimeService) *GrumblePostUseCase {
 	return &GrumblePostUseCase{
-		grumbleRepo: grumbleRepo,
+		grumbleRepo:  grumbleRepo,
+		eventTimeSvc: eventTimeSvc,
 	}
 }
 
@@ -41,7 +44,7 @@ func (uc *GrumblePostUseCase) Post(ctx context.Context, req PostGrumbleRequest) 
 		VibeCount:      0,
 		IsPurified:     false,
 		PostedAt:       now,
-		ExpiresAt:      now.Add(24 * time.Hour), // 24B��k��Jd
+		ExpiresAt:      uc.eventTimeSvc.CalculateNextMidnight(now), // 翌日の00:00
 		IsEventGrumble: req.IsEventGrumble,
 	}
 

@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/dokkiitech/grumble-back/internal/config"
+	sharedservice "github.com/dokkiitech/grumble-back/internal/domain/shared/service"
 	"github.com/dokkiitech/grumble-back/internal/infrastructure"
 	"github.com/dokkiitech/grumble-back/internal/job"
 	"github.com/dokkiitech/grumble-back/internal/usecase"
@@ -40,7 +41,10 @@ func main() {
 		log.Fatalf("DB ping error: %v", err)
 	}
 
-	grumbleRepo := infrastructure.NewPostgresGrumbleRepository(dbPool)
+	// Initialize domain service
+	eventTimeService := sharedservice.NewEventTimeService()
+
+	grumbleRepo := infrastructure.NewPostgresGrumbleRepository(dbPool, eventTimeService)
 	purgeUC := usecase.NewPurgeExpiredUseCase(grumbleRepo, logger)
 
 	switch *mode {

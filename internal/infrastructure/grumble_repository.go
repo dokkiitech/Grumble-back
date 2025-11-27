@@ -8,18 +8,23 @@ import (
 
 	"github.com/dokkiitech/grumble-back/internal/domain/grumble"
 	"github.com/dokkiitech/grumble-back/internal/domain/shared"
+	sharedservice "github.com/dokkiitech/grumble-back/internal/domain/shared/service"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // PostgresGrumbleRepository implements grumble.Repository using PostgreSQL
 type PostgresGrumbleRepository struct {
-	db *pgxpool.Pool
+	db           *pgxpool.Pool
+	eventTimeSvc *sharedservice.EventTimeService
 }
 
 // NewPostgresGrumbleRepository creates a new PostgresGrumbleRepository
-func NewPostgresGrumbleRepository(db *pgxpool.Pool) *PostgresGrumbleRepository {
-	return &PostgresGrumbleRepository{db: db}
+func NewPostgresGrumbleRepository(db *pgxpool.Pool, eventTimeSvc *sharedservice.EventTimeService) *PostgresGrumbleRepository {
+	return &PostgresGrumbleRepository{
+		db:           db,
+		eventTimeSvc: eventTimeSvc,
+	}
 }
 
 // Create stores a new grumble
@@ -202,14 +207,54 @@ func (r *PostgresGrumbleRepository) Update(ctx context.Context, g *grumble.Grumb
 	return nil
 }
 
-// DeleteExpired removes all grumbles past their expiration time
-func (r *PostgresGrumbleRepository) DeleteExpired(ctx context.Context) (int, error) {
-	query := "DELETE FROM grumbles WHERE expires_at <= $1"
+// ArchiveExpired moves expired grumbles to archive table and removes them from main table
+func (r *PostgresGrumbleRepository) ArchiveExpired(ctx context.Context) (int, error) {
+	// トランザクション開始
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return 0, &shared.InternalError{
+			Message: "failed to start transaction",
+			Err:     err,
+		}
+	}
+	defer tx.Rollback(ctx)
 
-	result, err := r.db.Exec(ctx, query, time.Now())
+	now := time.Now()
+
+	// 1. 期限切れの投稿をアーカイブテーブルに挿入
+	insertQuery := `
+		INSERT INTO grumbles_archive
+			(grumble_id, user_id, content, toxic_level, vibe_count,
+			 is_purified, posted_at, expires_at, is_event_grumble, archived_at)
+		SELECT
+			grumble_id, user_id, content, toxic_level, vibe_count,
+			is_purified, posted_at, expires_at, is_event_grumble, $1
+		FROM grumbles
+		WHERE expires_at <= $2
+	`
+
+	_, err = tx.Exec(ctx, insertQuery, now, now)
+	if err != nil {
+		return 0, &shared.InternalError{
+			Message: "failed to archive expired grumbles",
+			Err:     err,
+		}
+	}
+
+	// 2. grumblesテーブルから削除
+	deleteQuery := "DELETE FROM grumbles WHERE expires_at <= $1"
+	result, err := tx.Exec(ctx, deleteQuery, now)
 	if err != nil {
 		return 0, &shared.InternalError{
 			Message: "failed to delete expired grumbles",
+			Err:     err,
+		}
+	}
+
+	// トランザクションコミット
+	if err := tx.Commit(ctx); err != nil {
+		return 0, &shared.InternalError{
+			Message: "failed to commit transaction",
 			Err:     err,
 		}
 	}
@@ -283,7 +328,141 @@ func (r *PostgresGrumbleRepository) IncrementVibeCount(ctx context.Context, id s
 	return nil
 }
 
+
+// FindArchivedTimeline retrieves grumbles from archive table for a specific date
+func (r *PostgresGrumbleRepository) FindArchivedTimeline(
+	ctx context.Context,
+	filter grumble.TimelineFilter,
+	targetDate time.Time,
+) ([]*grumble.Grumble, error) {
+	// 対象日の00:00〜23:59を取得
+	dayStart, dayEnd := r.eventTimeSvc.GetDayBounds(targetDate)
+
+	baseQuery := `
+		SELECT grumble_id, user_id, content, toxic_level, vibe_count,
+		       is_purified, posted_at, expires_at, is_event_grumble
+		FROM grumbles_archive
+		WHERE posted_at >= $1 AND posted_at <= $2
+	`
+
+	args := []interface{}{dayStart, dayEnd}
+	argIdx := 3
+
+	// フィルタ条件を追加
+	query := baseQuery
+
+	if filter.ToxicLevelMin != nil {
+		query += fmt.Sprintf(" AND toxic_level >= $%d", argIdx)
+		args = append(args, *filter.ToxicLevelMin)
+		argIdx++
+	}
+
+	if filter.ToxicLevelMax != nil {
+		query += fmt.Sprintf(" AND toxic_level <= $%d", argIdx)
+		args = append(args, *filter.ToxicLevelMax)
+		argIdx++
+	}
+
+	if filter.ExcludePurified {
+		query += " AND is_purified = FALSE"
+	}
+
+	// ソートとページネーション
+	query += " ORDER BY posted_at DESC"
+
+	if filter.Limit > 0 {
+		query += fmt.Sprintf(" LIMIT $%d", argIdx)
+		args = append(args, filter.Limit)
+		argIdx++
+	}
+
+	if filter.Offset > 0 {
+		query += fmt.Sprintf(" OFFSET $%d", argIdx)
+		args = append(args, filter.Offset)
+	}
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, &shared.InternalError{
+			Message: "failed to query archived timeline",
+			Err:     err,
+		}
+	}
+	defer rows.Close()
+
+	var grumbles []*grumble.Grumble
+	for rows.Next() {
+		var g grumble.Grumble
+		err := rows.Scan(
+			&g.GrumbleID, &g.UserID, &g.Content, &g.ToxicLevel, &g.VibeCount,
+			&g.IsPurified, &g.PostedAt, &g.ExpiresAt, &g.IsEventGrumble,
+		)
+		if err != nil {
+			return nil, &shared.InternalError{
+				Message: "failed to scan archived grumble",
+				Err:     err,
+			}
+		}
+		grumbles = append(grumbles, &g)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, &shared.InternalError{
+			Message: "error iterating archived grumbles",
+			Err:     err,
+		}
+	}
+
+	return grumbles, nil
+}
+
+// CountArchivedTimeline counts archived grumbles for a specific date
+func (r *PostgresGrumbleRepository) CountArchivedTimeline(
+	ctx context.Context,
+	filter grumble.TimelineFilter,
+	targetDate time.Time,
+) (int, error) {
+	dayStart, dayEnd := r.eventTimeSvc.GetDayBounds(targetDate)
+
+	query := `
+		SELECT COUNT(*)
+		FROM grumbles_archive
+		WHERE posted_at >= $1 AND posted_at <= $2
+	`
+
+	args := []interface{}{dayStart, dayEnd}
+	argIdx := 3
+
+	if filter.ToxicLevelMin != nil {
+		query += fmt.Sprintf(" AND toxic_level >= $%d", argIdx)
+		args = append(args, *filter.ToxicLevelMin)
+		argIdx++
+	}
+
+	if filter.ToxicLevelMax != nil {
+		query += fmt.Sprintf(" AND toxic_level <= $%d", argIdx)
+		args = append(args, *filter.ToxicLevelMax)
+		argIdx++
+	}
+
+	if filter.ExcludePurified {
+		query += " AND is_purified = FALSE"
+	}
+
+	var count int
+	err := r.db.QueryRow(ctx, query, args...).Scan(&count)
+	if err != nil {
+		return 0, &shared.InternalError{
+			Message: "failed to count archived timeline",
+			Err:     err,
+		}
+	}
+
+	return count, nil
+}
+
 func buildTimelineFilter(base string, filter grumble.TimelineFilter, args []interface{}) (string, []interface{}) {
+
 	query := base
 
 	addCondition := func(condition string, value interface{}) {

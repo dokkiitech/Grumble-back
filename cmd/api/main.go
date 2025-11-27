@@ -77,18 +77,22 @@ func main() {
 	}
 	logger.Info("Firebase authentication client initialized")
 
+	// Initialize domain services
+	purifyService := sharedservice.NewPurifyService(cfg.PurificationThreshold)
+	virtueService := sharedservice.NewVirtueService()
+	eventTimeService := sharedservice.NewEventTimeService()
+
 	// Initialize repositories
-	grumbleRepo := infrastructure.NewPostgresGrumbleRepository(dbPool)
+	grumbleRepo := infrastructure.NewPostgresGrumbleRepository(dbPool, eventTimeService)
 	userRepo := infrastructure.NewPostgresUserRepository(dbPool)
 	vibeRepo := infrastructure.NewPostgresVibeRepository(dbPool)
 
 	// Initialize use cases
-	grumblePostUC := usecase.NewGrumblePostUseCase(grumbleRepo)
+	grumblePostUC := usecase.NewGrumblePostUseCase(grumbleRepo, eventTimeService)
 	timelineGetUC := usecase.NewTimelineGetUseCase(grumbleRepo)
+	eventGrumblesGetUC := usecase.NewEventGrumblesGetUseCase(grumbleRepo, eventTimeService)
 	authAnonymousUC := usecase.NewAuthAnonymousUseCase(userRepo)
 	userQueryUC := usecase.NewUserQueryUseCase(userRepo)
-	purifyService := sharedservice.NewPurifyService(cfg.PurificationThreshold)
-	virtueService := sharedservice.NewVirtueService()
 	vibeAddUC := usecase.NewVibeAddUseCase(grumbleRepo, vibeRepo, userRepo, purifyService, virtueService)
 
 	// Initialize presenters
@@ -98,6 +102,7 @@ func main() {
 	// Initialize controllers
 	grumbleController := controller.NewGrumbleController(grumblePostUC, grumblePresenter, logger)
 	timelineController := controller.NewTimelineController(timelineGetUC, timelinePresenter, logger)
+	eventGrumblesController := controller.NewEventGrumblesController(eventGrumblesGetUC, grumblePresenter, logger)
 	authController := controller.NewAuthController(
 		authAnonymousUC,
 		userQueryUC,
@@ -112,7 +117,7 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(authClient, authAnonymousUC, logger)
 
 	// Create strict server implementation that combines all controllers
-	strictServer := api.NewStrictControllerServer(grumbleController, timelineController, authController, vibeController, logger)
+	strictServer := api.NewStrictControllerServer(grumbleController, timelineController, authController, vibeController, eventGrumblesController, logger)
 	serverImpl := api.NewStrictHandler(strictServer, nil)
 
 	// Setup Gin router
