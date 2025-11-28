@@ -25,10 +25,10 @@ jobs:
     if: github.event.pull_request.draft == false
     steps:
       - name: Checkout
-        uses: actions/checkout@latest
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@latest
+        uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
           cache: false
@@ -54,10 +54,10 @@ jobs:
     if: github.event.pull_request.draft == false
     steps:
       - name: Checkout
-        uses: actions/checkout@latest
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@latest
+        uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -80,10 +80,10 @@ jobs:
     if: github.event.pull_request.draft == false
     steps:
       - name: Checkout
-        uses: actions/checkout@latest
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@latest
+        uses: actions/setup-go@v6
         with:
           go-version-file: 'go.mod'
           cache: true
