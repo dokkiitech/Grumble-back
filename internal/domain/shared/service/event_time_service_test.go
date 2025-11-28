@@ -42,28 +42,28 @@ func TestEventTimeService_GetEventTargetDate(t *testing.T) {
 	jst, _ := time.LoadLocation("Asia/Tokyo")
 
 	tests := []struct {
-		name           string
-		currentTime    time.Time
+		name            string
+		currentTime     time.Time
 		expectedDayDiff int // 現在日との差分（-1なら前日）
 	}{
 		{
-			name:           "午前0時 - 前日を返す",
-			currentTime:    time.Date(2025, 11, 27, 0, 0, 0, 0, jst),
+			name:            "午前0時 - 前日を返す",
+			currentTime:     time.Date(2025, 11, 27, 0, 0, 0, 0, jst),
 			expectedDayDiff: -1,
 		},
 		{
-			name:           "午前11時59分 - 前日を返す",
-			currentTime:    time.Date(2025, 11, 27, 11, 59, 0, 0, jst),
+			name:            "午前11時59分 - 前日を返す",
+			currentTime:     time.Date(2025, 11, 27, 11, 59, 0, 0, jst),
 			expectedDayDiff: -1,
 		},
 		{
-			name:           "午後12時 - 当日を返す",
-			currentTime:    time.Date(2025, 11, 27, 12, 0, 0, 0, jst),
+			name:            "午後12時 - 当日を返す",
+			currentTime:     time.Date(2025, 11, 27, 12, 0, 0, 0, jst),
 			expectedDayDiff: 0,
 		},
 		{
-			name:           "午後23時 - 当日を返す",
-			currentTime:    time.Date(2025, 11, 27, 23, 0, 0, 0, jst),
+			name:            "午後23時 - 当日を返す",
+			currentTime:     time.Date(2025, 11, 27, 23, 0, 0, 0, jst),
 			expectedDayDiff: 0,
 		},
 	}

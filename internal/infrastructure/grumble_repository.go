@@ -217,7 +217,9 @@ func (r *PostgresGrumbleRepository) ArchiveExpired(ctx context.Context) (int, er
 			Err:     err,
 		}
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	now := time.Now()
 
@@ -328,7 +330,6 @@ func (r *PostgresGrumbleRepository) IncrementVibeCount(ctx context.Context, id s
 	return nil
 }
 
-
 // FindArchivedTimeline retrieves grumbles from archive table for a specific date
 func (r *PostgresGrumbleRepository) FindArchivedTimeline(
 	ctx context.Context,
@@ -363,8 +364,10 @@ func (r *PostgresGrumbleRepository) FindArchivedTimeline(
 		argIdx++
 	}
 
-	if filter.ExcludePurified {
-		query += " AND is_purified = FALSE"
+	if filter.IsPurified != nil {
+		query += fmt.Sprintf(" AND is_purified = $%d", argIdx)
+		args = append(args, *filter.IsPurified)
+		argIdx++
 	}
 
 	// ソートとページネーション
@@ -445,8 +448,10 @@ func (r *PostgresGrumbleRepository) CountArchivedTimeline(
 		argIdx++
 	}
 
-	if filter.ExcludePurified {
-		query += " AND is_purified = FALSE"
+	if filter.IsPurified != nil {
+		query += fmt.Sprintf(" AND is_purified = $%d", argIdx)
+		args = append(args, *filter.IsPurified)
+		argIdx++
 	}
 
 	var count int
