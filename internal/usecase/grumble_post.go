@@ -12,9 +12,9 @@ import (
 
 // GrumblePostUseCase handles posting new grumbles
 type GrumblePostUseCase struct {
-	grumbleRepo    grumble.Repository
-	eventTimeSvc   *sharedservice.EventTimeService
-	contentFilter  grumble.ContentFilterClient
+	grumbleRepo   grumble.Repository
+	eventTimeSvc  *sharedservice.EventTimeService
+	contentFilter grumble.ContentFilterClient
 }
 
 // NewGrumblePostUseCase creates a new GrumblePostUseCase
