@@ -5,10 +5,11 @@ run:
   tests: false
 
 output:
-  text:
-    path: stdout
-    print-linter-name: true
-    print-issued-lines: true
+  formats:
+    text:
+      path: stdout
+      print-linter-name: true
+      print-issued-lines: true
 
 linters:
   default: none
@@ -24,15 +25,13 @@ linters:
       - common-false-positives
       - legacy
       - std-error-handling
-
-linters-settings:
-  govet:
-    disable:
-      - shadow
-  errcheck:
-    exclude-functions:
-      - type-assertions
-      - blank
+  settings:
+    govet:
+      disable:
+        - shadow
+    errcheck:
+      check-type-assertions: false
+      check-blank: false
 
 formatters:
   exclusions:
