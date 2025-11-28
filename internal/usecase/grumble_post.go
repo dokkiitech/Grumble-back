@@ -12,15 +12,21 @@ import (
 
 // GrumblePostUseCase handles posting new grumbles
 type GrumblePostUseCase struct {
-	grumbleRepo  grumble.Repository
-	eventTimeSvc *sharedservice.EventTimeService
+	grumbleRepo    grumble.Repository
+	eventTimeSvc   *sharedservice.EventTimeService
+	contentFilter  grumble.ContentFilterClient
 }
 
 // NewGrumblePostUseCase creates a new GrumblePostUseCase
-func NewGrumblePostUseCase(grumbleRepo grumble.Repository, eventTimeSvc *sharedservice.EventTimeService) *GrumblePostUseCase {
+func NewGrumblePostUseCase(
+	grumbleRepo grumble.Repository,
+	eventTimeSvc *sharedservice.EventTimeService,
+	contentFilter grumble.ContentFilterClient,
+) *GrumblePostUseCase {
 	return &GrumblePostUseCase{
-		grumbleRepo:  grumbleRepo,
-		eventTimeSvc: eventTimeSvc,
+		grumbleRepo:   grumbleRepo,
+		eventTimeSvc:  eventTimeSvc,
+		contentFilter: contentFilter,
 	}
 }
 
@@ -34,6 +40,20 @@ type PostGrumbleRequest struct {
 
 // Post creates and persists a new grumble
 func (uc *GrumblePostUseCase) Post(ctx context.Context, req PostGrumbleRequest) (*grumble.Grumble, error) {
+	// Filter content if content filter is configured
+	if uc.contentFilter != nil {
+		result, err := uc.contentFilter.FilterContent(ctx, req.Content)
+		if err != nil {
+			return nil, err
+		}
+
+		if !result.IsAppropriate {
+			return nil, &shared.InappropriateContentError{
+				Reason: result.Reason,
+			}
+		}
+	}
+
 	// Create grumble entity
 	now := time.Now()
 	g := &grumble.Grumble{
