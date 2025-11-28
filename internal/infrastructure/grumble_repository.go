@@ -217,7 +217,9 @@ func (r *PostgresGrumbleRepository) ArchiveExpired(ctx context.Context) (int, er
 			Err:     err,
 		}
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	now := time.Now()
 
