@@ -328,7 +328,6 @@ func (r *PostgresGrumbleRepository) IncrementVibeCount(ctx context.Context, id s
 	return nil
 }
 
-
 // FindArchivedTimeline retrieves grumbles from archive table for a specific date
 func (r *PostgresGrumbleRepository) FindArchivedTimeline(
 	ctx context.Context,
