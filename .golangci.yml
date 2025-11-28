@@ -1,0 +1,39 @@
+version: "2"
+
+run:
+  issues-exit-code: 1
+  tests: false
+
+output:
+  text:
+    path: stdout
+    print-linter-name: true
+    print-issued-lines: true
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - gosec
+    - govet
+    - nilnil
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+
+linters-settings:
+  govet:
+    disable:
+      - shadow
+  errcheck:
+    exclude-functions:
+      - type-assertions
+      - blank
+
+formatters:
+  exclusions:
+    generated: lax
