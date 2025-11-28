@@ -59,13 +59,18 @@ func (uc *EventGrumblesGetUseCase) Get(ctx context.Context, req EventGrumblesReq
 	targetDate := uc.eventTimeSvc.GetEventTargetDate(now)
 
 	// フィルタ構築
+	var isPurified *bool
+	if req.ExcludePurified {
+		falseVal := false
+		isPurified = &falseVal
+	}
 	filter := grumble.TimelineFilter{
-		ToxicLevelMin:   req.ToxicLevelMin,
-		ToxicLevelMax:   req.ToxicLevelMax,
-		ExcludePurified: req.ExcludePurified,
-		ExcludeExpired:  false, // アーカイブなので期限チェック不要
-		Limit:           req.Limit,
-		Offset:          req.Offset,
+		ToxicLevelMin:  req.ToxicLevelMin,
+		ToxicLevelMax:  req.ToxicLevelMax,
+		IsPurified:     isPurified,
+		ExcludeExpired: false, // アーカイブなので期限チェック不要
+		Limit:          req.Limit,
+		Offset:         req.Offset,
 	}
 
 	// アーカイブテーブルから前日の投稿を取得
