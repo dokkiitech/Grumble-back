@@ -64,5 +64,5 @@ type InappropriateContentError struct {
 }
 
 func (e *InappropriateContentError) Error() string {
-	return fmt.Sprintf("inappropriate content: %s", e.Reason)
+	return e.Reason
 }
