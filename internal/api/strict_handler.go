@@ -333,16 +333,19 @@ type errorClassification struct {
 
 func (s *StrictControllerServer) classifyError(ctx context.Context, err error) (errorClassification, bool) {
 	var (
-		validationErr   *shared.ValidationError
-		notFoundErr     *shared.NotFoundError
-		duplicateErr    *shared.DuplicateVibeError
-		unauthorizedErr *shared.UnauthorizedError
-		internalErr     *shared.InternalError
+		validationErr           *shared.ValidationError
+		notFoundErr             *shared.NotFoundError
+		duplicateErr            *shared.DuplicateVibeError
+		unauthorizedErr         *shared.UnauthorizedError
+		inappropriateContentErr *shared.InappropriateContentError
+		internalErr             *shared.InternalError
 	)
 
 	switch {
 	case errors.As(err, &validationErr):
 		return errorClassification{Status: http.StatusBadRequest, Payload: errorResponse("VALIDATION_ERROR", validationErr.Error())}, true
+	case errors.As(err, &inappropriateContentErr):
+		return errorClassification{Status: http.StatusBadRequest, Payload: errorResponse("INAPPROPRIATE_CONTENT", inappropriateContentErr.Error())}, true
 	case errors.As(err, &notFoundErr):
 		return errorClassification{Status: http.StatusNotFound, Payload: errorResponse("NOT_FOUND", notFoundErr.Error())}, true
 	case errors.As(err, &duplicateErr):
