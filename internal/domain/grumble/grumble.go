@@ -8,16 +8,17 @@ import (
 
 // Grumble represents a user's complaint post (愚痴投稿)
 type Grumble struct {
-	GrumbleID      shared.GrumbleID
-	UserID         shared.UserID
-	Content        string
-	ToxicLevel     shared.ToxicLevel
-	VibeCount      int
-	IsPurified     bool
-	PostedAt       time.Time
-	ExpiresAt      time.Time
-	IsEventGrumble bool
-	HasVibed       *bool
+	GrumbleID         shared.GrumbleID
+	UserID            shared.UserID
+	Content           string
+	ToxicLevel        shared.ToxicLevel
+	VibeCount         int
+	PurifiedThreshold int
+	IsPurified        bool
+	PostedAt          time.Time
+	ExpiresAt         time.Time
+	IsEventGrumble    bool
+	HasVibed          *bool
 }
 
 // Validate checks if the grumble meets business rules
