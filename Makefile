@@ -1,4 +1,4 @@
-.PHONY: init generate clean test format lint precommit local-setup local-db-up local-db-down local-migrate local-api local-down
+.PHONY: init generate clean test format lint precommit local-setup local-db-up local-db-down local-migrate local-api local-down vendor
 
 # OpenAPI schema location (managed in this repository)
 OPENAPI_FILE := openapi.yaml

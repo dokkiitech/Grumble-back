@@ -78,7 +78,7 @@ func main() {
 	logger.Info("Firebase authentication client initialized")
 
 	// Initialize domain services
-	purifyService := sharedservice.NewPurifyService(cfg.PurificationThreshold)
+	purifyService := sharedservice.NewPurifyService(cfg.PurificationThresholdDefault)
 	virtueService := sharedservice.NewVirtueService()
 	eventTimeService := sharedservice.NewEventTimeService()
 
@@ -88,7 +88,13 @@ func main() {
 	vibeRepo := infrastructure.NewPostgresVibeRepository(dbPool)
 
 	// Initialize use cases
-	grumblePostUC := usecase.NewGrumblePostUseCase(grumbleRepo, eventTimeService)
+	grumblePostUC := usecase.NewGrumblePostUseCase(
+		grumbleRepo,
+		eventTimeService,
+		cfg.PurificationThresholdDefault,
+		cfg.PurificationThresholdMin,
+		cfg.PurificationThresholdMax,
+	)
 	timelineGetUC := usecase.NewTimelineGetUseCase(grumbleRepo)
 	eventGrumblesGetUC := usecase.NewEventGrumblesGetUseCase(grumbleRepo, eventTimeService)
 	authAnonymousUC := usecase.NewAuthAnonymousUseCase(userRepo)
