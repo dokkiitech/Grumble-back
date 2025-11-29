@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/dokkiitech/grumble-back/internal/domain/grumble"
@@ -12,9 +13,12 @@ import (
 
 // GrumblePostUseCase handles posting new grumbles
 type GrumblePostUseCase struct {
-	grumbleRepo   grumble.Repository
-	eventTimeSvc  *sharedservice.EventTimeService
-	contentFilter grumble.ContentFilterClient
+	grumbleRepo              grumble.Repository
+	eventTimeSvc             *sharedservice.EventTimeService
+	contentFilter            grumble.ContentFilterClient
+	purifiedThresholdDefault int
+	purifiedThresholdMin     int
+	purifiedThresholdMax     int
 }
 
 // NewGrumblePostUseCase creates a new GrumblePostUseCase
@@ -22,20 +26,27 @@ func NewGrumblePostUseCase(
 	grumbleRepo grumble.Repository,
 	eventTimeSvc *sharedservice.EventTimeService,
 	contentFilter grumble.ContentFilterClient,
+	purifiedThresholdDefault int,
+	purifiedThresholdMin int,
+	purifiedThresholdMax int,
 ) *GrumblePostUseCase {
 	return &GrumblePostUseCase{
-		grumbleRepo:   grumbleRepo,
-		eventTimeSvc:  eventTimeSvc,
-		contentFilter: contentFilter,
+		grumbleRepo:              grumbleRepo,
+		eventTimeSvc:             eventTimeSvc,
+		contentFilter:            contentFilter,
+		purifiedThresholdDefault: purifiedThresholdDefault,
+		purifiedThresholdMin:     purifiedThresholdMin,
+		purifiedThresholdMax:     purifiedThresholdMax,
 	}
 }
 
 // PostGrumbleRequest represents the input for posting a grumble
 type PostGrumbleRequest struct {
-	UserID         shared.UserID
-	Content        string
-	ToxicLevel     shared.ToxicLevel
-	IsEventGrumble bool
+	UserID            shared.UserID
+	Content           string
+	ToxicLevel        shared.ToxicLevel
+	PurifiedThreshold *int // Optional: if nil, use default
+	IsEventGrumble    bool
 }
 
 // Post creates and persists a new grumble
@@ -54,18 +65,33 @@ func (uc *GrumblePostUseCase) Post(ctx context.Context, req PostGrumbleRequest) 
 		}
 	}
 
+	// Determine purified threshold: use provided value or default
+	purifiedThreshold := uc.purifiedThresholdDefault
+	if req.PurifiedThreshold != nil {
+		purifiedThreshold = *req.PurifiedThreshold
+	}
+
+	// Validate purified threshold range
+	if purifiedThreshold < uc.purifiedThresholdMin || purifiedThreshold > uc.purifiedThresholdMax {
+		return nil, &shared.ValidationError{
+			Field:   "purified_threshold",
+			Message: fmt.Sprintf("purified_threshold must be between %d and %d", uc.purifiedThresholdMin, uc.purifiedThresholdMax),
+		}
+	}
+
 	// Create grumble entity
 	now := time.Now()
 	g := &grumble.Grumble{
-		GrumbleID:      shared.GrumbleID(uuid.New().String()),
-		UserID:         req.UserID,
-		Content:        req.Content,
-		ToxicLevel:     req.ToxicLevel,
-		VibeCount:      0,
-		IsPurified:     false,
-		PostedAt:       now,
-		ExpiresAt:      uc.eventTimeSvc.CalculateNextMidnight(now), // 翌日の00:00
-		IsEventGrumble: req.IsEventGrumble,
+		GrumbleID:         shared.GrumbleID(uuid.New().String()),
+		UserID:            req.UserID,
+		Content:           req.Content,
+		ToxicLevel:        req.ToxicLevel,
+		VibeCount:         0,
+		PurifiedThreshold: purifiedThreshold,
+		IsPurified:        false,
+		PostedAt:          now,
+		ExpiresAt:         uc.eventTimeSvc.CalculateNextMidnight(now), // 翌日の00:00
+		IsEventGrumble:    req.IsEventGrumble,
 	}
 
 	// Validate business rules

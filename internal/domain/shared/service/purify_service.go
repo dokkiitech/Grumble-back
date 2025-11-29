@@ -22,11 +22,12 @@ func (s *PurifyService) Threshold() int {
 }
 
 // ShouldPurify determines if the grumble meets purification criteria.
+// Uses the grumble's own purified_threshold instead of the global threshold.
 func (s *PurifyService) ShouldPurify(g *grumble.Grumble) bool {
 	if g == nil {
 		return false
 	}
-	return g.CanBePurified(s.threshold)
+	return g.CanBePurified(g.PurifiedThreshold)
 }
 
 // Purify marks the grumble as purified if it satisfies the rules.

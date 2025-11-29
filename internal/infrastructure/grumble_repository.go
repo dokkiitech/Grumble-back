@@ -32,13 +32,13 @@ func (r *PostgresGrumbleRepository) Create(ctx context.Context, g *grumble.Grumb
 	query := `
 		INSERT INTO grumbles (
 			grumble_id, user_id, content, toxic_level, vibe_count,
-			is_purified, posted_at, expires_at, is_event_grumble
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			purified_threshold, is_purified, posted_at, expires_at, is_event_grumble
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
 	_, err := r.db.Exec(ctx, query,
 		g.GrumbleID, g.UserID, g.Content, g.ToxicLevel, g.VibeCount,
-		g.IsPurified, g.PostedAt, g.ExpiresAt, g.IsEventGrumble,
+		g.PurifiedThreshold, g.IsPurified, g.PostedAt, g.ExpiresAt, g.IsEventGrumble,
 	)
 	if err != nil {
 		return &shared.InternalError{
@@ -54,7 +54,7 @@ func (r *PostgresGrumbleRepository) Create(ctx context.Context, g *grumble.Grumb
 func (r *PostgresGrumbleRepository) FindByID(ctx context.Context, id shared.GrumbleID) (*grumble.Grumble, error) {
 	query := `
 		SELECT grumble_id, user_id, content, toxic_level, vibe_count,
-		       is_purified, posted_at, expires_at, is_event_grumble
+		       purified_threshold, is_purified, posted_at, expires_at, is_event_grumble
 		FROM grumbles
 		WHERE grumble_id = $1
 	`
@@ -62,7 +62,7 @@ func (r *PostgresGrumbleRepository) FindByID(ctx context.Context, id shared.Grum
 	var g grumble.Grumble
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&g.GrumbleID, &g.UserID, &g.Content, &g.ToxicLevel, &g.VibeCount,
-		&g.IsPurified, &g.PostedAt, &g.ExpiresAt, &g.IsEventGrumble,
+		&g.PurifiedThreshold, &g.IsPurified, &g.PostedAt, &g.ExpiresAt, &g.IsEventGrumble,
 	)
 	if err == pgx.ErrNoRows {
 		return nil, &shared.NotFoundError{
@@ -85,7 +85,7 @@ func (r *PostgresGrumbleRepository) FindTimeline(ctx context.Context, filter gru
 	args := []interface{}{}
 	baseQuery := `
 		SELECT g.grumble_id, g.user_id, g.content, g.toxic_level, g.vibe_count,
-		       g.is_purified, g.posted_at, g.expires_at, g.is_event_grumble`
+		       g.purified_threshold, g.is_purified, g.posted_at, g.expires_at, g.is_event_grumble`
 	if filter.ViewerUserID != nil {
 		baseQuery += fmt.Sprintf(", EXISTS (SELECT 1 FROM vibes v WHERE v.grumble_id = g.grumble_id AND v.user_id = $%d) AS has_vibed", len(args)+1)
 		args = append(args, string(*filter.ViewerUserID))
@@ -133,7 +133,7 @@ func (r *PostgresGrumbleRepository) FindTimeline(ctx context.Context, filter gru
 		)
 		err := rows.Scan(
 			&g.GrumbleID, &g.UserID, &g.Content, &g.ToxicLevel, &g.VibeCount,
-			&g.IsPurified, &g.PostedAt, &g.ExpiresAt, &g.IsEventGrumble,
+			&g.PurifiedThreshold, &g.IsPurified, &g.PostedAt, &g.ExpiresAt, &g.IsEventGrumble,
 			&hasVibed,
 		)
 		if err != nil {
@@ -227,10 +227,10 @@ func (r *PostgresGrumbleRepository) ArchiveExpired(ctx context.Context) (int, er
 	insertQuery := `
 		INSERT INTO grumbles_archive
 			(grumble_id, user_id, content, toxic_level, vibe_count,
-			 is_purified, posted_at, expires_at, is_event_grumble, archived_at)
+			 purified_threshold, is_purified, posted_at, expires_at, is_event_grumble, archived_at)
 		SELECT
 			grumble_id, user_id, content, toxic_level, vibe_count,
-			is_purified, posted_at, expires_at, is_event_grumble, $1
+			purified_threshold, is_purified, posted_at, expires_at, is_event_grumble, $1
 		FROM grumbles
 		WHERE expires_at <= $2
 	`
@@ -268,12 +268,12 @@ func (r *PostgresGrumbleRepository) ArchiveExpired(ctx context.Context) (int, er
 func (r *PostgresGrumbleRepository) FindPurificationCandidates(ctx context.Context, threshold int) ([]*grumble.Grumble, error) {
 	query := `
 		SELECT grumble_id, user_id, content, toxic_level, vibe_count,
-		       is_purified, posted_at, expires_at, is_event_grumble
+		       purified_threshold, is_purified, posted_at, expires_at, is_event_grumble
 		FROM grumbles
-		WHERE is_purified = FALSE AND vibe_count >= $1
+		WHERE is_purified = FALSE AND vibe_count >= purified_threshold
 	`
 
-	rows, err := r.db.Query(ctx, query, threshold)
+	rows, err := r.db.Query(ctx, query)
 	if err != nil {
 		return nil, &shared.InternalError{
 			Message: "failed to find purification candidates",
@@ -287,7 +287,7 @@ func (r *PostgresGrumbleRepository) FindPurificationCandidates(ctx context.Conte
 		var g grumble.Grumble
 		err := rows.Scan(
 			&g.GrumbleID, &g.UserID, &g.Content, &g.ToxicLevel, &g.VibeCount,
-			&g.IsPurified, &g.PostedAt, &g.ExpiresAt, &g.IsEventGrumble,
+			&g.PurifiedThreshold, &g.IsPurified, &g.PostedAt, &g.ExpiresAt, &g.IsEventGrumble,
 		)
 		if err != nil {
 			return nil, &shared.InternalError{
@@ -341,7 +341,7 @@ func (r *PostgresGrumbleRepository) FindArchivedTimeline(
 
 	baseQuery := `
 		SELECT grumble_id, user_id, content, toxic_level, vibe_count,
-		       is_purified, posted_at, expires_at, is_event_grumble
+		       purified_threshold, is_purified, posted_at, expires_at, is_event_grumble
 		FROM grumbles_archive
 		WHERE posted_at >= $1 AND posted_at <= $2
 	`
@@ -398,7 +398,7 @@ func (r *PostgresGrumbleRepository) FindArchivedTimeline(
 		var g grumble.Grumble
 		err := rows.Scan(
 			&g.GrumbleID, &g.UserID, &g.Content, &g.ToxicLevel, &g.VibeCount,
-			&g.IsPurified, &g.PostedAt, &g.ExpiresAt, &g.IsEventGrumble,
+			&g.PurifiedThreshold, &g.IsPurified, &g.PostedAt, &g.ExpiresAt, &g.IsEventGrumble,
 		)
 		if err != nil {
 			return nil, &shared.InternalError{

@@ -9,16 +9,17 @@ import (
 
 // GrumbleResponse represents a grumble in API responses
 type GrumbleResponse struct {
-	GrumbleID      uuid.UUID `json:"grumble_id"`
-	UserID         uuid.UUID `json:"user_id"`
-	Content        string    `json:"content"`
-	ToxicLevel     int       `json:"toxic_level"`
-	VibeCount      int       `json:"vibe_count"`
-	IsPurified     bool      `json:"is_purified"`
-	PostedAt       time.Time `json:"posted_at"`
-	ExpiresAt      time.Time `json:"expires_at"`
-	IsEventGrumble bool      `json:"is_event_grumble"`
-	HasVibed       *bool     `json:"has_vibed,omitempty"`
+	GrumbleID         uuid.UUID `json:"grumble_id"`
+	UserID            uuid.UUID `json:"user_id"`
+	Content           string    `json:"content"`
+	ToxicLevel        int       `json:"toxic_level"`
+	VibeCount         int       `json:"vibe_count"`
+	PurifiedThreshold int       `json:"purified_threshold"`
+	IsPurified        bool      `json:"is_purified"`
+	PostedAt          time.Time `json:"posted_at"`
+	ExpiresAt         time.Time `json:"expires_at"`
+	IsEventGrumble    bool      `json:"is_event_grumble"`
+	HasVibed          *bool     `json:"has_vibed,omitempty"`
 }
 
 // GrumblePresenter converts domain grumbles to API responses
@@ -41,16 +42,17 @@ func (p *GrumblePresenter) ToAPIGrumble(g *grumble.Grumble) (*GrumbleResponse, e
 	}
 
 	return &GrumbleResponse{
-		GrumbleID:      grumbleUUID,
-		UserID:         userUUID,
-		Content:        g.Content,
-		ToxicLevel:     int(g.ToxicLevel),
-		VibeCount:      g.VibeCount,
-		IsPurified:     g.IsPurified,
-		PostedAt:       g.PostedAt,
-		ExpiresAt:      g.ExpiresAt,
-		IsEventGrumble: g.IsEventGrumble,
-		HasVibed:       g.HasVibed,
+		GrumbleID:         grumbleUUID,
+		UserID:            userUUID,
+		Content:           g.Content,
+		ToxicLevel:        int(g.ToxicLevel),
+		VibeCount:         g.VibeCount,
+		PurifiedThreshold: g.PurifiedThreshold,
+		IsPurified:        g.IsPurified,
+		PostedAt:          g.PostedAt,
+		ExpiresAt:         g.ExpiresAt,
+		IsEventGrumble:    g.IsEventGrumble,
+		HasVibed:          g.HasVibed,
 	}, nil
 }
 

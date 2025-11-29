@@ -78,7 +78,7 @@ func main() {
 	logger.Info("Firebase authentication client initialized")
 
 	// Initialize domain services
-	purifyService := sharedservice.NewPurifyService(cfg.PurificationThreshold)
+	purifyService := sharedservice.NewPurifyService(cfg.PurificationThresholdDefault)
 	virtueService := sharedservice.NewVirtueService()
 	eventTimeService := sharedservice.NewEventTimeService()
 
@@ -91,7 +91,14 @@ func main() {
 	geminiClient := infrastructure.NewGeminiClient(cfg.GeminiAPIKey, cfg.GeminiModel)
 
 	// Initialize use cases
-	grumblePostUC := usecase.NewGrumblePostUseCase(grumbleRepo, eventTimeService, geminiClient)
+	grumblePostUC := usecase.NewGrumblePostUseCase(
+		grumbleRepo,
+		eventTimeService,
+		geminiClient,
+		cfg.PurificationThresholdDefault,
+		cfg.PurificationThresholdMin,
+		cfg.PurificationThresholdMax,
+	)
 	timelineGetUC := usecase.NewTimelineGetUseCase(grumbleRepo)
 	eventGrumblesGetUC := usecase.NewEventGrumblesGetUseCase(grumbleRepo, eventTimeService)
 	authAnonymousUC := usecase.NewAuthAnonymousUseCase(userRepo)
