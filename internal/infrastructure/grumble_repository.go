@@ -466,6 +466,96 @@ func (r *PostgresGrumbleRepository) CountArchivedTimeline(
 	return count, nil
 }
 
+// Stats aggregates grumble counts per bucket from the grumble_stats view.
+func (r *PostgresGrumbleRepository) Stats(ctx context.Context, granularity grumble.Granularity, from, to time.Time) ([]grumble.StatsRow, error) {
+	query := `
+		SELECT bucket, purified_count, unpurified_count, total_vibes
+		FROM grumble_stats
+		WHERE granularity = $1
+		  AND bucket >= $2 AND bucket < $3
+		ORDER BY bucket DESC
+	`
+
+	rows, err := r.db.Query(ctx, query, granularity, from, to)
+	if err != nil {
+		return nil, &shared.InternalError{
+			Message: "failed to query grumble stats",
+			Err:     err,
+		}
+	}
+	defer rows.Close()
+
+	var result []grumble.StatsRow
+	for rows.Next() {
+		var row grumble.StatsRow
+		if err := rows.Scan(&row.Bucket, &row.PurifiedCount, &row.UnpurifiedCount, &row.TotalVibes); err != nil {
+			return nil, &shared.InternalError{
+				Message: "failed to scan grumble stats",
+				Err:     err,
+			}
+		}
+		result = append(result, row)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, &shared.InternalError{
+			Message: "error iterating grumble stats",
+			Err:     err,
+		}
+	}
+
+	return result, nil
+}
+
+// StatsByToxic aggregates grumble counts per bucket and toxic level from grumble_stats_toxic view.
+func (r *PostgresGrumbleRepository) StatsByToxic(ctx context.Context, granularity grumble.Granularity, from, to time.Time, toxicLevel *int) ([]grumble.StatsRow, error) {
+	baseQuery := `
+		SELECT bucket, toxic_level, purified_count, unpurified_count, total_vibes
+		FROM grumble_stats_toxic
+		WHERE granularity = $1
+		  AND bucket >= $2 AND bucket < $3
+	`
+
+	args := []interface{}{granularity, from, to}
+	if toxicLevel != nil {
+		baseQuery += " AND toxic_level = $4"
+		args = append(args, *toxicLevel)
+	}
+	baseQuery += " ORDER BY bucket DESC, toxic_level"
+
+	rows, err := r.db.Query(ctx, baseQuery, args...)
+	if err != nil {
+		return nil, &shared.InternalError{
+			Message: "failed to query grumble stats by toxic level",
+			Err:     err,
+		}
+	}
+	defer rows.Close()
+
+	var result []grumble.StatsRow
+	for rows.Next() {
+		var row grumble.StatsRow
+		var level int
+		if err := rows.Scan(&row.Bucket, &level, &row.PurifiedCount, &row.UnpurifiedCount, &row.TotalVibes); err != nil {
+			return nil, &shared.InternalError{
+				Message: "failed to scan grumble stats by toxic level",
+				Err:     err,
+			}
+		}
+		row.ToxicLevel = &level
+		result = append(result, row)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, &shared.InternalError{
+			Message: "error iterating grumble stats by toxic level",
+			Err:     err,
+		}
+	}
+
+	return result, nil
+}
+
 func buildTimelineFilter(base string, filter grumble.TimelineFilter, args []interface{}) (string, []interface{}) {
 
 	query := base

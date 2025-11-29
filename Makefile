@@ -1,10 +1,10 @@
-.PHONY: init generate clean test format lint precommit local-setup local-db-up local-db-down local-migrate local-api local-down vendor
+.PHONY: init generate clean test format lint precommit local-setup local-db-up local-db-down local-migrate local-api local-batch local-down vendor docker-build/api docker-build/batch docker-build
 
 # OpenAPI schema location (managed in this repository)
 OPENAPI_FILE := openapi.yaml
 DOCKER_COMPOSE := docker compose -f docker/docker-compose.yml
 LOCAL_DATABASE_URL := postgres://grumble:grumble@localhost:5432/grumble?sslmode=disable
-LOCAL_HTTP_ADDR := :8080
+LOCAL_HTTP_ADDR := :9999
 
 __init_go__:
 	@go mod download
@@ -85,22 +85,44 @@ local-db-up:
 local-db-down local-down:
 	@$(DOCKER_COMPOSE) down
 
+local-compose-up:
+	@$(DOCKER_COMPOSE) up -d
+
 local-migrate:
 	@DATABASE_URL="$(LOCAL_DATABASE_URL)" go run ./cmd/migrate
 
 local-api:
-	@CURDIR="$(CURDIR)" bash -lc 'set -a; if [ -f .env ]; then source .env; fi; set +a; \
-		if [ -z "$$FIREBASE_CREDENTIALS_FILE" ] && [ -f firebase_secrets.json ]; then \
-			export FIREBASE_CREDENTIALS_FILE="$$CURDIR/firebase_secrets.json"; \
-		fi; \
-		export DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DATABASE_URL)}"; \
-		export GRUMBLE_HTTP_ADDR="$${GRUMBLE_HTTP_ADDR:-$(LOCAL_HTTP_ADDR)}"; \
-		go run ./cmd/api'
+	@echo "Building Docker image..."
+	@docker build -f docker/Dockerfile.api -t grumble-api:local .
+	@echo "Running API server in Docker..."
+	@docker run --rm -it \
+		--network host \
+		-e DATABASE_URL="$(LOCAL_DATABASE_URL)" \
+		-e GRUMBLE_HTTP_ADDR="$(LOCAL_HTTP_ADDR)" \
+		$(if $(wildcard .env),--env-file .env) \
+		$(if $(wildcard firebase_secrets.json),-v $(CURDIR)/firebase_secrets.json:/app/firebase_secrets.json -e FIREBASE_CREDENTIALS_FILE=/app/firebase_secrets.json) \
+		grumble-api:local
 
 local-batch:
-	@CURDIR="$(CURDIR)" bash -lc 'set -a; if [ -f .env ]; then source .env; fi; set +a; \
-		if [ -z "$$FIREBASE_CREDENTIALS_FILE" ] && [ -f firebase_secrets.json ]; then \
-			export FIREBASE_CREDENTIALS_FILE="$$CURDIR/firebase_secrets.json"; \
-		fi; \
-		export DATABASE_URL="$${DATABASE_URL:-$(LOCAL_DATABASE_URL)}"; \
-		go run ./cmd/batch'
+	@echo "Building Docker image..."
+	@docker build -f docker/Dockerfile.batch -t grumble-batch:local .
+	@echo "Running batch job in Docker..."
+	@docker run --rm -it \
+		--network host \
+		-e DATABASE_URL="$(LOCAL_DATABASE_URL)" \
+		$(if $(wildcard .env),--env-file .env) \
+		$(if $(wildcard firebase_secrets.json),-v $(CURDIR)/firebase_secrets.json:/app/firebase_secrets.json -e FIREBASE_CREDENTIALS_FILE=/app/firebase_secrets.json) \
+		grumble-batch:local
+
+docker-build/api:
+	@echo "Building API Docker image..."
+	@docker build -f docker/Dockerfile.api -t grumble-api:local .
+	@echo "API Docker image built successfully: grumble-api:local"
+
+docker-build/batch:
+	@echo "Building Batch Docker image..."
+	@docker build -f docker/Dockerfile.batch -t grumble-batch:local .
+	@echo "Batch Docker image built successfully: grumble-batch:local"
+
+docker-build: docker-build/api docker-build/batch
+	@echo "All Docker images built successfully."

@@ -1,0 +1,48 @@
+# syntax=docker/dockerfile:1
+
+ARG BUILDER_IMAGE=golang:1.24-alpine
+ARG RUNTIME_IMAGE=alpine:3.20
+
+# ============================================
+# Stage 1: Builder
+# ============================================
+FROM ${BUILDER_IMAGE} AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk update && apk upgrade --no-cache && \
+    apk add --no-cache git
+
+# Copy dependency files first for better caching
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
+# Copy source code
+COPY . .
+
+# Install oapi-codegen and generate API code
+RUN go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest && \
+    oapi-codegen -config oapi-codegen/api.yml openapi.yaml
+
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o grumble-batch ./cmd/batch
+
+# ============================================
+# Stage 2: Runtime
+# ============================================
+FROM ${RUNTIME_IMAGE}
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apk add --no-cache ca-certificates tzdata
+
+# Copy binary from builder
+COPY --from=builder /app/grumble-batch ./grumble-batch
+
+# Copy migrations
+COPY --from=builder /app/migrations ./migrations
+
+# Run the application
+CMD ["./grumble-batch"]

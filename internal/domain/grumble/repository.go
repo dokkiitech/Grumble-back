@@ -51,4 +51,10 @@ type Repository interface {
 
 	// CountArchivedTimeline returns the total count of archived grumbles for a specific date
 	CountArchivedTimeline(ctx context.Context, filter TimelineFilter, targetDate time.Time) (int, error)
+
+	// Stats aggregates grumble statistics by granularity and date range.
+	Stats(ctx context.Context, granularity Granularity, from, to time.Time) ([]StatsRow, error)
+
+	// StatsByToxic aggregates grumble statistics by granularity, date range, and toxic level (optional filter).
+	StatsByToxic(ctx context.Context, granularity Granularity, from, to time.Time, toxicLevel *int) ([]StatsRow, error)
 }

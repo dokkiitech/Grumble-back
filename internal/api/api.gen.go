@@ -37,6 +37,20 @@ const (
 	AddVibeJSONBodyVibeTypeWAKARU AddVibeJSONBodyVibeType = "WAKARU"
 )
 
+// Defines values for GetGrumbleStatsParamsGranularity.
+const (
+	GetGrumbleStatsParamsGranularityDay   GetGrumbleStatsParamsGranularity = "day"
+	GetGrumbleStatsParamsGranularityMonth GetGrumbleStatsParamsGranularity = "month"
+	GetGrumbleStatsParamsGranularityWeek  GetGrumbleStatsParamsGranularity = "week"
+)
+
+// Defines values for GetGrumbleStatsToxicParamsGranularity.
+const (
+	GetGrumbleStatsToxicParamsGranularityDay   GetGrumbleStatsToxicParamsGranularity = "day"
+	GetGrumbleStatsToxicParamsGranularityMonth GetGrumbleStatsToxicParamsGranularity = "month"
+	GetGrumbleStatsToxicParamsGranularityWeek  GetGrumbleStatsToxicParamsGranularity = "week"
+)
+
 // AnonymousUser defines model for AnonymousUser.
 type AnonymousUser struct {
 	// CreatedAt ユーザー作成日時
@@ -142,6 +156,39 @@ type Grumble struct {
 	VibeCount int `json:"vibe_count"`
 }
 
+// GrumbleStatsBucket defines model for GrumbleStatsBucket.
+type GrumbleStatsBucket struct {
+	// Bucket 集計バケット開始時刻（UTC）
+	Bucket time.Time `json:"bucket"`
+
+	// PurifiedCount 成仏済み件数
+	PurifiedCount int `json:"purified_count"`
+
+	// TotalVibes いいね（vibe_count）の合計
+	TotalVibes int `json:"total_vibes"`
+
+	// UnpurifiedCount 未成仏件数
+	UnpurifiedCount int `json:"unpurified_count"`
+}
+
+// GrumbleStatsToxicBucket defines model for GrumbleStatsToxicBucket.
+type GrumbleStatsToxicBucket struct {
+	// Bucket 集計バケット開始時刻（UTC）
+	Bucket time.Time `json:"bucket"`
+
+	// PurifiedCount 成仏済み件数
+	PurifiedCount int `json:"purified_count"`
+
+	// TotalVibes いいね（vibe_count）の合計
+	TotalVibes int `json:"total_vibes"`
+
+	// ToxicLevel 毒度レベル
+	ToxicLevel int `json:"toxic_level"`
+
+	// UnpurifiedCount 未成仏件数
+	UnpurifiedCount int `json:"unpurified_count"`
+}
+
 // Vibe defines model for Vibe.
 type Vibe struct {
 	// GrumbleID 共感対象の投稿ID
@@ -204,6 +251,45 @@ type AddVibeJSONBody struct {
 // AddVibeJSONBodyVibeType defines parameters for AddVibe.
 type AddVibeJSONBodyVibeType string
 
+// GetGrumbleStatsParams defines parameters for GetGrumbleStats.
+type GetGrumbleStatsParams struct {
+	// Granularity 集計粒度
+	Granularity GetGrumbleStatsParamsGranularity `form:"granularity" json:"granularity"`
+
+	// From 期間開始（省略時はバックエンドがデフォルト期間を設定）
+	From *time.Time `form:"from,omitempty" json:"from,omitempty"`
+
+	// To 期間終了（非含む。省略時はデフォルト期間を設定）
+	To *time.Time `form:"to,omitempty" json:"to,omitempty"`
+
+	// Tz タイムゾーン（例: Asia/Tokyo）。未指定はサーバ既定
+	Tz *string `form:"tz,omitempty" json:"tz,omitempty"`
+}
+
+// GetGrumbleStatsParamsGranularity defines parameters for GetGrumbleStats.
+type GetGrumbleStatsParamsGranularity string
+
+// GetGrumbleStatsToxicParams defines parameters for GetGrumbleStatsToxic.
+type GetGrumbleStatsToxicParams struct {
+	// Granularity 集計粒度
+	Granularity GetGrumbleStatsToxicParamsGranularity `form:"granularity" json:"granularity"`
+
+	// From 期間開始（省略時はバックエンドがデフォルト期間を設定）
+	From *time.Time `form:"from,omitempty" json:"from,omitempty"`
+
+	// To 期間終了（非含む。省略時はデフォルト期間を設定）
+	To *time.Time `form:"to,omitempty" json:"to,omitempty"`
+
+	// Tz タイムゾーン（例: Asia/Tokyo）。未指定はサーバ既定
+	Tz *string `form:"tz,omitempty" json:"tz,omitempty"`
+
+	// ToxicLevel 毒度レベルを指定するとそのレベルのみを返す
+	ToxicLevel *int `form:"toxic_level,omitempty" json:"toxic_level,omitempty"`
+}
+
+// GetGrumbleStatsToxicParamsGranularity defines parameters for GetGrumbleStatsToxic.
+type GetGrumbleStatsToxicParamsGranularity string
+
 // CreateGrumbleJSONRequestBody defines body for CreateGrumble for application/json ContentType.
 type CreateGrumbleJSONRequestBody = CreateGrumbleRequest
 
@@ -230,6 +316,12 @@ type ServerInterface interface {
 	// 「わかる…」を送る
 	// (POST /grumbles/{grumble_id}/vibes)
 	AddVibe(c *gin.Context, grumbleID openapi_types.UUID)
+	// 投稿統計取得
+	// (GET /stats/grumbles)
+	GetGrumbleStats(c *gin.Context, params GetGrumbleStatsParams)
+	// 投稿統計取得（毒度別）
+	// (GET /stats/grumbles/toxic)
+	GetGrumbleStatsToxic(c *gin.Context, params GetGrumbleStatsToxicParams)
 	// 自分のユーザー情報取得
 	// (GET /users/me)
 	GetMyProfile(c *gin.Context)
@@ -459,6 +551,132 @@ func (siw *ServerInterfaceWrapper) AddVibe(c *gin.Context) {
 	siw.Handler.AddVibe(c, grumbleID)
 }
 
+// GetGrumbleStats operation middleware
+func (siw *ServerInterfaceWrapper) GetGrumbleStats(c *gin.Context) {
+
+	var err error
+
+	c.Set(FirebaseAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetGrumbleStatsParams
+
+	// ------------- Required query parameter "granularity" -------------
+
+	if paramValue := c.Query("granularity"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Query argument granularity is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "granularity", c.Request.URL.Query(), &params.Granularity)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter granularity: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "from", c.Request.URL.Query(), &params.From)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter from: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "to", c.Request.URL.Query(), &params.To)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter to: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "tz" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "tz", c.Request.URL.Query(), &params.Tz)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter tz: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetGrumbleStats(c, params)
+}
+
+// GetGrumbleStatsToxic operation middleware
+func (siw *ServerInterfaceWrapper) GetGrumbleStatsToxic(c *gin.Context) {
+
+	var err error
+
+	c.Set(FirebaseAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetGrumbleStatsToxicParams
+
+	// ------------- Required query parameter "granularity" -------------
+
+	if paramValue := c.Query("granularity"); paramValue != "" {
+
+	} else {
+		siw.ErrorHandler(c, fmt.Errorf("Query argument granularity is required, but not found"), http.StatusBadRequest)
+		return
+	}
+
+	err = runtime.BindQueryParameter("form", true, true, "granularity", c.Request.URL.Query(), &params.Granularity)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter granularity: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "from", c.Request.URL.Query(), &params.From)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter from: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "to", c.Request.URL.Query(), &params.To)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter to: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "tz" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "tz", c.Request.URL.Query(), &params.Tz)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter tz: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "toxic_level" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "toxic_level", c.Request.URL.Query(), &params.ToxicLevel)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter toxic_level: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetGrumbleStatsToxic(c, params)
+}
+
 // GetMyProfile operation middleware
 func (siw *ServerInterfaceWrapper) GetMyProfile(c *gin.Context) {
 
@@ -507,6 +725,8 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/grumbles", wrapper.GetGrumbles)
 	router.POST(options.BaseURL+"/grumbles", wrapper.CreateGrumble)
 	router.POST(options.BaseURL+"/grumbles/:grumble_id/vibes", wrapper.AddVibe)
+	router.GET(options.BaseURL+"/stats/grumbles", wrapper.GetGrumbleStats)
+	router.GET(options.BaseURL+"/stats/grumbles/toxic", wrapper.GetGrumbleStatsToxic)
 	router.GET(options.BaseURL+"/users/me", wrapper.GetMyProfile)
 }
 
@@ -740,6 +960,76 @@ func (response AddVibe409JSONResponse) VisitAddVibeResponse(w http.ResponseWrite
 	return json.NewEncoder(w).Encode(response)
 }
 
+type GetGrumbleStatsRequestObject struct {
+	Params GetGrumbleStatsParams
+}
+
+type GetGrumbleStatsResponseObject interface {
+	VisitGetGrumbleStatsResponse(w http.ResponseWriter) error
+}
+
+type GetGrumbleStats200JSONResponse []GrumbleStatsBucket
+
+func (response GetGrumbleStats200JSONResponse) VisitGetGrumbleStatsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetGrumbleStats400JSONResponse ErrorResponse
+
+func (response GetGrumbleStats400JSONResponse) VisitGetGrumbleStatsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetGrumbleStats401JSONResponse ErrorResponse
+
+func (response GetGrumbleStats401JSONResponse) VisitGetGrumbleStatsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetGrumbleStatsToxicRequestObject struct {
+	Params GetGrumbleStatsToxicParams
+}
+
+type GetGrumbleStatsToxicResponseObject interface {
+	VisitGetGrumbleStatsToxicResponse(w http.ResponseWriter) error
+}
+
+type GetGrumbleStatsToxic200JSONResponse []GrumbleStatsToxicBucket
+
+func (response GetGrumbleStatsToxic200JSONResponse) VisitGetGrumbleStatsToxicResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetGrumbleStatsToxic400JSONResponse ErrorResponse
+
+func (response GetGrumbleStatsToxic400JSONResponse) VisitGetGrumbleStatsToxicResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetGrumbleStatsToxic401JSONResponse ErrorResponse
+
+func (response GetGrumbleStatsToxic401JSONResponse) VisitGetGrumbleStatsToxicResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type GetMyProfileRequestObject struct {
 }
 
@@ -785,6 +1075,12 @@ type StrictServerInterface interface {
 	// 「わかる…」を送る
 	// (POST /grumbles/{grumble_id}/vibes)
 	AddVibe(ctx context.Context, request AddVibeRequestObject) (AddVibeResponseObject, error)
+	// 投稿統計取得
+	// (GET /stats/grumbles)
+	GetGrumbleStats(ctx context.Context, request GetGrumbleStatsRequestObject) (GetGrumbleStatsResponseObject, error)
+	// 投稿統計取得（毒度別）
+	// (GET /stats/grumbles/toxic)
+	GetGrumbleStatsToxic(ctx context.Context, request GetGrumbleStatsToxicRequestObject) (GetGrumbleStatsToxicResponseObject, error)
 	// 自分のユーザー情報取得
 	// (GET /users/me)
 	GetMyProfile(ctx context.Context, request GetMyProfileRequestObject) (GetMyProfileResponseObject, error)
@@ -971,6 +1267,60 @@ func (sh *strictHandler) AddVibe(ctx *gin.Context, grumbleID openapi_types.UUID)
 		ctx.Status(http.StatusInternalServerError)
 	} else if validResponse, ok := response.(AddVibeResponseObject); ok {
 		if err := validResponse.VisitAddVibeResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetGrumbleStats operation middleware
+func (sh *strictHandler) GetGrumbleStats(ctx *gin.Context, params GetGrumbleStatsParams) {
+	var request GetGrumbleStatsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetGrumbleStats(ctx, request.(GetGrumbleStatsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetGrumbleStats")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(GetGrumbleStatsResponseObject); ok {
+		if err := validResponse.VisitGetGrumbleStatsResponse(ctx.Writer); err != nil {
+			ctx.Error(err)
+		}
+	} else if response != nil {
+		ctx.Error(fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetGrumbleStatsToxic operation middleware
+func (sh *strictHandler) GetGrumbleStatsToxic(ctx *gin.Context, params GetGrumbleStatsToxicParams) {
+	var request GetGrumbleStatsToxicRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *gin.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetGrumbleStatsToxic(ctx, request.(GetGrumbleStatsToxicRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetGrumbleStatsToxic")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		ctx.Error(err)
+		ctx.Status(http.StatusInternalServerError)
+	} else if validResponse, ok := response.(GetGrumbleStatsToxicResponseObject); ok {
+		if err := validResponse.VisitGetGrumbleStatsToxicResponse(ctx.Writer); err != nil {
 			ctx.Error(err)
 		}
 	} else if response != nil {

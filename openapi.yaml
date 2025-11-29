@@ -226,6 +226,56 @@ components:
           default: 0
           description: オフセット
 
+    GrumbleStatsBucket:
+      type: object
+      required:
+        - bucket
+        - purified_count
+        - unpurified_count
+        - total_vibes
+      properties:
+        bucket:
+          type: string
+          format: date-time
+          description: 集計バケット開始時刻（UTC）
+        purified_count:
+          type: integer
+          description: 成仏済み件数
+        unpurified_count:
+          type: integer
+          description: 未成仏件数
+        total_vibes:
+          type: integer
+          description: いいね（vibe_count）の合計
+
+    GrumbleStatsToxicBucket:
+      type: object
+      required:
+        - bucket
+        - toxic_level
+        - purified_count
+        - unpurified_count
+        - total_vibes
+      properties:
+        bucket:
+          type: string
+          format: date-time
+          description: 集計バケット開始時刻（UTC）
+        toxic_level:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: 毒度レベル
+        purified_count:
+          type: integer
+          description: 成仏済み件数
+        unpurified_count:
+          type: integer
+          description: 未成仏件数
+        total_vibes:
+          type: integer
+          description: いいね（vibe_count）の合計
+
     ErrorResponse:
       type: object
       required:
@@ -242,6 +292,124 @@ components:
           example: "既にこの投稿に「わかる…」を送信しています"
 
 paths:
+  /stats/grumbles:
+    get:
+      summary: 投稿統計取得
+      description: 日/週/月ごとの成仏済み・未成仏・いいね数を返す
+      operationId: getGrumbleStats
+      parameters:
+        - name: granularity
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [day, week, month]
+          description: 集計粒度
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: 期間開始（省略時はバックエンドがデフォルト期間を設定）
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: 期間終了（非含む。省略時はデフォルト期間を設定）
+        - name: tz
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "タイムゾーン（例: Asia/Tokyo）。未指定はサーバ既定"
+      responses:
+        '200':
+          description: 統計結果
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GrumbleStatsBucket'
+        '400':
+          description: 不正なリクエスト
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /stats/grumbles/toxic:
+    get:
+      summary: 投稿統計取得（毒度別）
+      description: 日/週/月ごとの毒度別成仏・未成仏・いいね数を返す
+      operationId: getGrumbleStatsToxic
+      parameters:
+        - name: granularity
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [day, week, month]
+          description: 集計粒度
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: 期間開始（省略時はバックエンドがデフォルト期間を設定）
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: 期間終了（非含む。省略時はデフォルト期間を設定）
+        - name: tz
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "タイムゾーン（例: Asia/Tokyo）。未指定はサーバ既定"
+        - name: toxic_level
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+          description: 毒度レベルを指定するとそのレベルのみを返す
+      responses:
+        '200':
+          description: 毒度別統計結果
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GrumbleStatsToxicBucket'
+        '400':
+          description: 不正なリクエスト
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /grumbles:
     get:
       summary: タイムライン取得
