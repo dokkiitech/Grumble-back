@@ -313,6 +313,7 @@ paths:
             type: string
             enum: [day, week, month]
           description: 集計粒度
+          example: day
         - name: from
           in: query
           required: false
@@ -320,6 +321,7 @@ paths:
             type: string
             format: date-time
           description: 期間開始（省略時はバックエンドがデフォルト期間を設定）
+          example: "2025-11-01T00:00:00Z"
         - name: to
           in: query
           required: false
@@ -327,12 +329,14 @@ paths:
             type: string
             format: date-time
           description: 期間終了（非含む。省略時はデフォルト期間を設定）
+          example: "2025-11-08T00:00:00Z"
         - name: tz
           in: query
           required: false
           schema:
             type: string
           description: "タイムゾーン（例: Asia/Tokyo）。未指定はサーバ既定"
+          example: Asia/Tokyo
       responses:
         '200':
           description: 統計結果
@@ -368,6 +372,7 @@ paths:
             type: string
             enum: [day, week, month]
           description: 集計粒度
+          example: week
         - name: from
           in: query
           required: false
@@ -375,6 +380,7 @@ paths:
             type: string
             format: date-time
           description: 期間開始（省略時はバックエンドがデフォルト期間を設定）
+          example: "2025-10-01T00:00:00Z"
         - name: to
           in: query
           required: false
@@ -382,12 +388,14 @@ paths:
             type: string
             format: date-time
           description: 期間終了（非含む。省略時はデフォルト期間を設定）
+          example: "2025-11-01T00:00:00Z"
         - name: tz
           in: query
           required: false
           schema:
             type: string
           description: "タイムゾーン（例: Asia/Tokyo）。未指定はサーバ既定"
+          example: Asia/Tokyo
         - name: toxic_level
           in: query
           required: false
@@ -396,6 +404,7 @@ paths:
             minimum: 1
             maximum: 5
           description: 毒度レベルを指定するとそのレベルのみを返す
+          example: 3
       responses:
         '200':
           description: 毒度別統計結果
