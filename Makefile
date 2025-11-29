@@ -5,13 +5,15 @@ OPENAPI_FILE := openapi.yaml
 DOCKER_COMPOSE := docker compose -f docker/docker-compose.yml
 LOCAL_DATABASE_URL := postgres://grumble:grumble@localhost:5432/grumble?sslmode=disable
 LOCAL_HTTP_ADDR := :8080
+GOBIN := $(shell go env GOPATH)/bin
+OAPI_CODEGEN := $(GOBIN)/oapi-codegen
 
 __init_go__:
 	@go mod download
 	@go mod tidy
 
 __init_oapi_codegen__:
-	@if ! command -v oapi-codegen &> /dev/null; then \
+	@if [ ! -f "$(OAPI_CODEGEN)" ]; then \
 		echo "oapi-codegen not found, installing..."; \
 		go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest; \
 	else \
@@ -27,7 +29,7 @@ generate:
 		exit 1; \
 	fi
 	@echo "Generating from OpenAPI file: $(OPENAPI_FILE)"
-	@oapi-codegen -config oapi-codegen/api.yml $(OPENAPI_FILE)
+	@$(OAPI_CODEGEN) -config oapi-codegen/api.yml $(OPENAPI_FILE)
 
 # Clean generated files
 clean:
