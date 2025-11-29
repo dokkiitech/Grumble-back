@@ -49,6 +49,7 @@ func NewAuthController(
 type MyProfileResponse struct {
 	UserID       uuid.UUID
 	VirtuePoints int
+	VirtueRank   string
 	CreatedAt    time.Time
 	ProfileTitle *string
 }
@@ -69,6 +70,7 @@ func (ctrl *AuthController) GetMyProfile(ctx context.Context, userID shared.User
 	return &MyProfileResponse{
 		UserID:       userUUID,
 		VirtuePoints: user.VirtuePoints,
+		VirtueRank:   string(user.Rank()),
 		CreatedAt:    user.CreatedAt,
 		ProfileTitle: user.ProfileTitle,
 	}, nil
@@ -93,6 +95,7 @@ func (ctrl *AuthController) ResolveRankingLimit(requested *int) int {
 type RankingResponse struct {
 	UserID       uuid.UUID
 	VirtuePoints int
+	VirtueRank   string
 	CreatedAt    time.Time
 	ProfileTitle *string
 }
@@ -118,6 +121,7 @@ func (ctrl *AuthController) GetBodhisattvaRankings(ctx context.Context, limit in
 		rankings[i] = &RankingResponse{
 			UserID:       userUUID,
 			VirtuePoints: u.VirtuePoints,
+			VirtueRank:   string(u.Rank()),
 			CreatedAt:    u.CreatedAt,
 			ProfileTitle: u.ProfileTitle,
 		}

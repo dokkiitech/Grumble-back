@@ -14,6 +14,11 @@ type AnonymousUser struct {
 	ProfileTitle *string // Optional title like "今週の菩薩"
 }
 
+// Rank returns the virtue-based rank derived from virtue points.
+func (u *AnonymousUser) Rank() VirtueRank {
+	return RankFromVirtuePoints(u.VirtuePoints)
+}
+
 // Validate checks if the user meets business rules
 func (u *AnonymousUser) Validate() error {
 	// UserID must not be empty
