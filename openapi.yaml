@@ -55,6 +55,10 @@ components:
           type: integer
           minimum: 0
           description: 「わかる…」の総数
+        vibe_rank:
+          type: string
+          description: 「わかる…」の数に応じたランク
+          enum: ["見習い行者", "弥勒", "地蔵", "大菩薩"]
         purified_threshold:
           type: integer
           minimum: 1
@@ -147,6 +151,10 @@ components:
           type: integer
           minimum: 0
           description: 徳ポイント
+        virtue_rank:
+          type: string
+          description: わかる数（徳ポイント）に応じたランク
+          enum: ["見習い行者", "弥勒", "地蔵", "大菩薩"]
         created_at:
           type: string
           format: date-time

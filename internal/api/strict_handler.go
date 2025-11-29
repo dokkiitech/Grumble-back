@@ -498,6 +498,10 @@ func toAPIAnonymousUser(resp *controller.MyProfileResponse) AnonymousUser {
 	if resp.ProfileTitle != nil {
 		anon.ProfileTitle = nullable.NewNullableWithValue(*resp.ProfileTitle)
 	}
+	if resp.VirtueRank != "" {
+		rank := AnonymousUserVirtueRank(resp.VirtueRank)
+		anon.VirtueRank = &rank
+	}
 	return anon
 }
 

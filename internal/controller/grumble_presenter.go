@@ -14,6 +14,7 @@ type GrumbleResponse struct {
 	Content           string    `json:"content"`
 	ToxicLevel        int       `json:"toxic_level"`
 	VibeCount         int       `json:"vibe_count"`
+	VibeRank          string    `json:"vibe_rank,omitempty"`
 	PurifiedThreshold int       `json:"purified_threshold"`
 	IsPurified        bool      `json:"is_purified"`
 	PostedAt          time.Time `json:"posted_at"`
@@ -47,6 +48,7 @@ func (p *GrumblePresenter) ToAPIGrumble(g *grumble.Grumble) (*GrumbleResponse, e
 		Content:           g.Content,
 		ToxicLevel:        int(g.ToxicLevel),
 		VibeCount:         g.VibeCount,
+		VibeRank:          string(grumble.RankFromVibeCount(g.VibeCount)),
 		PurifiedThreshold: g.PurifiedThreshold,
 		IsPurified:        g.IsPurified,
 		PostedAt:          g.PostedAt,
