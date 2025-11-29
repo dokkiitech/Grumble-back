@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dokkiitech/grumble-back/internal/controller"
+	"github.com/dokkiitech/grumble-back/internal/domain/grumble"
 	"github.com/dokkiitech/grumble-back/internal/domain/shared"
 	"github.com/dokkiitech/grumble-back/internal/logging"
 	"github.com/gin-gonic/gin"
@@ -22,6 +23,7 @@ type StrictControllerServer struct {
 	authController          *controller.AuthController
 	vibeController          *controller.VibeController
 	eventGrumblesController *controller.EventGrumblesController
+	statsController         *controller.GrumbleStatsController
 	logger                  logging.Logger
 }
 
@@ -32,6 +34,7 @@ func NewStrictControllerServer(
 	authCtrl *controller.AuthController,
 	vibeCtrl *controller.VibeController,
 	eventGrumblesCtrl *controller.EventGrumblesController,
+	statsCtrl *controller.GrumbleStatsController,
 	logger logging.Logger,
 ) *StrictControllerServer {
 	return &StrictControllerServer{
@@ -40,6 +43,7 @@ func NewStrictControllerServer(
 		authController:          authCtrl,
 		vibeController:          vibeCtrl,
 		eventGrumblesController: eventGrumblesCtrl,
+		statsController:         statsCtrl,
 		logger:                  logger,
 	}
 }
@@ -52,6 +56,90 @@ func (s *StrictControllerServer) GetEvents(ctx context.Context, _ GetEventsReque
 // GetEvent is currently not implemented.
 func (s *StrictControllerServer) GetEvent(ctx context.Context, _ GetEventRequestObject) (GetEventResponseObject, error) {
 	return nil, errors.New("GetEvent not implemented")
+}
+
+// GetGrumbleStats handles aggregated stats retrieval.
+func (s *StrictControllerServer) GetGrumbleStats(ctx context.Context, request GetGrumbleStatsRequestObject) (GetGrumbleStatsResponseObject, error) {
+	params := request.Params
+
+	tz := ""
+	if params.Tz != nil {
+		tz = *params.Tz
+	}
+
+	input := controller.StatsInput{
+		Granularity: grumble.Granularity(params.Granularity),
+		TZ:          tz,
+		From:        params.From,
+		To:          params.To,
+	}
+
+	result, err := s.statsController.GetStats(ctx, input)
+	if err != nil {
+		s.logger.ErrorContext(ctx, "GetGrumbleStats failed", "error", err)
+		if isValidationError(err) {
+			return GetGrumbleStats400JSONResponse(errorResponse("INVALID_QUERY_PARAM", err.Error())), nil
+		}
+		return GetGrumbleStats401JSONResponse(errorResponse("INTERNAL_ERROR", "Failed to retrieve stats")), nil
+	}
+
+	response := make([]GrumbleStatsBucket, len(result))
+	for i, r := range result {
+		response[i] = GrumbleStatsBucket{
+			Bucket:          r.Bucket,
+			PurifiedCount:   r.PurifiedCount,
+			UnpurifiedCount: r.UnpurifiedCount,
+			TotalVibes:      r.TotalVibes,
+		}
+	}
+
+	return GetGrumbleStats200JSONResponse(response), nil
+}
+
+// GetGrumbleStatsToxic handles aggregated stats with toxic-level breakdown.
+func (s *StrictControllerServer) GetGrumbleStatsToxic(ctx context.Context, request GetGrumbleStatsToxicRequestObject) (GetGrumbleStatsToxicResponseObject, error) {
+	params := request.Params
+
+	tz := ""
+	if params.Tz != nil {
+		tz = *params.Tz
+	}
+
+	input := controller.StatsByToxicInput{
+		StatsInput: controller.StatsInput{
+			Granularity: grumble.Granularity(params.Granularity),
+			TZ:          tz,
+			From:        params.From,
+			To:          params.To,
+		},
+		ToxicLevel: params.ToxicLevel,
+	}
+
+	result, err := s.statsController.GetStatsByToxic(ctx, input)
+	if err != nil {
+		s.logger.ErrorContext(ctx, "GetGrumbleStatsToxic failed", "error", err)
+		if isValidationError(err) {
+			return GetGrumbleStatsToxic400JSONResponse(errorResponse("INVALID_QUERY_PARAM", err.Error())), nil
+		}
+		return GetGrumbleStatsToxic401JSONResponse(errorResponse("INTERNAL_ERROR", "Failed to retrieve stats")), nil
+	}
+
+	response := make([]GrumbleStatsToxicBucket, len(result))
+	for i, r := range result {
+		level := 0
+		if r.ToxicLevel != nil {
+			level = *r.ToxicLevel
+		}
+		response[i] = GrumbleStatsToxicBucket{
+			Bucket:          r.Bucket,
+			ToxicLevel:      level,
+			PurifiedCount:   r.PurifiedCount,
+			UnpurifiedCount: r.UnpurifiedCount,
+			TotalVibes:      r.TotalVibes,
+		}
+	}
+
+	return GetGrumbleStatsToxic200JSONResponse(response), nil
 }
 
 // GetEventGrumbles handles retrieving event grumbles from archive
@@ -420,6 +508,14 @@ func toAPIAnonymousUser(resp *controller.MyProfileResponse) AnonymousUser {
 		anon.ProfileTitle = nullable.NewNullableWithValue(*resp.ProfileTitle)
 	}
 	return anon
+}
+
+func isValidationError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "invalid") || strings.Contains(msg, "must be") || strings.Contains(msg, "between")
 }
 
 func errorResponse(code, message string) ErrorResponse {
