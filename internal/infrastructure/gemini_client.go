@@ -27,6 +27,14 @@ func NewGeminiClient(apiKey, model string) *GeminiClient {
 
 // FilterContent implements grumble.ContentFilterClient
 func (c *GeminiClient) FilterContent(ctx context.Context, content string) (*grumble.ModerationResult, error) {
+	// If API key is empty, skip external call and allow content (local/dev fallback)
+	if strings.TrimSpace(c.apiKey) == "" {
+		return &grumble.ModerationResult{
+			IsAppropriate: true,
+			Reason:        "gemini_api_key_missing_skipped",
+		}, nil
+	}
+
 	// Create client with API key from environment
 	client, err := genai.NewClient(ctx, &genai.ClientConfig{
 		APIKey: c.apiKey,
