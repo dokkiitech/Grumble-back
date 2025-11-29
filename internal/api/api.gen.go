@@ -32,6 +32,13 @@ const (
 	VibeVibeTypeWAKARU VibeVibeType = "WAKARU"
 )
 
+// Defines values for GetEventGrumblesParamsPurifiedStatus.
+const (
+	GetEventGrumblesParamsPurifiedStatusAll           GetEventGrumblesParamsPurifiedStatus = "all"
+	GetEventGrumblesParamsPurifiedStatusIsNotPurified GetEventGrumblesParamsPurifiedStatus = "is_not_purified"
+	GetEventGrumblesParamsPurifiedStatusIsPurified    GetEventGrumblesParamsPurifiedStatus = "is_purified"
+)
+
 // Defines values for AddVibeJSONBodyVibeType.
 const (
 	AddVibeJSONBodyVibeTypeWAKARU AddVibeJSONBodyVibeType = "WAKARU"
@@ -181,7 +188,13 @@ type GetEventGrumblesParams struct {
 
 	// Offset オフセット
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// PurifiedStatus 成仏ステータスフィルター (is_purified=成仏済み, is_not_purified=成仏していない, all=全て)
+	PurifiedStatus *GetEventGrumblesParamsPurifiedStatus `form:"purified_status,omitempty" json:"purified_status,omitempty"`
 }
+
+// GetEventGrumblesParamsPurifiedStatus defines parameters for GetEventGrumbles.
+type GetEventGrumblesParamsPurifiedStatus string
 
 // GetGrumblesParams defines parameters for GetGrumbles.
 type GetGrumblesParams struct {
@@ -311,6 +324,14 @@ func (siw *ServerInterfaceWrapper) GetEventGrumbles(c *gin.Context) {
 	err = runtime.BindQueryParameter("form", true, false, "offset", c.Request.URL.Query(), &params.Offset)
 	if err != nil {
 		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter offset: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Optional query parameter "purified_status" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "purified_status", c.Request.URL.Query(), &params.PurifiedStatus)
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter purified_status: %w", err), http.StatusBadRequest)
 		return
 	}
 

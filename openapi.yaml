@@ -513,6 +513,16 @@ paths:
             minimum: 0
             default: 0
           description: オフセット
+        - name: purified_status
+          in: query
+          schema:
+            type: string
+            enum:
+              - is_purified
+              - is_not_purified
+              - all
+            default: all
+          description: 成仏ステータスフィルター (is_purified=成仏済み, is_not_purified=成仏していない, all=全て)
       responses:
         '200':
           description: イベント投稿リスト

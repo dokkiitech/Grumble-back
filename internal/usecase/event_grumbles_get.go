@@ -25,11 +25,11 @@ func NewEventGrumblesGetUseCase(grumbleRepo grumble.Repository, eventTimeSvc *sh
 
 // EventGrumblesRequest represents request parameters
 type EventGrumblesRequest struct {
-	ToxicLevelMin   *shared.ToxicLevel
-	ToxicLevelMax   *shared.ToxicLevel
-	ExcludePurified bool
-	Limit           int
-	Offset          int
+	ToxicLevelMin *shared.ToxicLevel
+	ToxicLevelMax *shared.ToxicLevel
+	IsPurified    *bool // nilの場合は全て、trueの場合は成仏済み、falseの場合は成仏していない
+	Limit         int
+	Offset        int
 }
 
 // EventGrumblesResponse represents the response
@@ -59,15 +59,10 @@ func (uc *EventGrumblesGetUseCase) Get(ctx context.Context, req EventGrumblesReq
 	targetDate := uc.eventTimeSvc.GetEventTargetDate(now)
 
 	// フィルタ構築
-	var isPurified *bool
-	if req.ExcludePurified {
-		falseVal := false
-		isPurified = &falseVal
-	}
 	filter := grumble.TimelineFilter{
 		ToxicLevelMin:  req.ToxicLevelMin,
 		ToxicLevelMax:  req.ToxicLevelMax,
-		IsPurified:     isPurified,
+		IsPurified:     req.IsPurified,
 		ExcludeExpired: false, // アーカイブなので期限チェック不要
 		Limit:          req.Limit,
 		Offset:         req.Offset,
