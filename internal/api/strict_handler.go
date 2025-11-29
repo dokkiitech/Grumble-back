@@ -84,18 +84,7 @@ func (s *StrictControllerServer) GetEventGrumbles(ctx context.Context, request G
 	// Convert controller response to OpenAPI response
 	apiGrumbles := make([]Grumble, len(response.Grumbles))
 	for i, g := range response.Grumbles {
-		apiGrumbles[i] = Grumble{
-			GrumbleID:      g.GrumbleID,
-			UserID:         g.UserID,
-			Content:        g.Content,
-			ToxicLevel:     g.ToxicLevel,
-			VibeCount:      g.VibeCount,
-			IsPurified:     g.IsPurified,
-			PostedAt:       g.PostedAt,
-			ExpiresAt:      g.ExpiresAt,
-			IsEventGrumble: g.IsEventGrumble,
-			HasVibed:       g.HasVibed,
-		}
+		apiGrumbles[i] = toAPIGrumble(g)
 	}
 
 	eventDate := openapi_types.Date{}
@@ -205,10 +194,11 @@ func (s *StrictControllerServer) CreateGrumble(ctx context.Context, request Crea
 	}
 
 	input := controller.CreateGrumbleInput{
-		UserID:         userID,
-		Content:        request.Body.Content,
-		ToxicLevel:     toxicLevel,
-		IsEventGrumble: request.Body.IsEventGrumble != nil && *request.Body.IsEventGrumble,
+		UserID:            userID,
+		Content:           request.Body.Content,
+		ToxicLevel:        toxicLevel,
+		PurifiedThreshold: request.Body.PurifiedThreshold,
+		IsEventGrumble:    request.Body.IsEventGrumble != nil && *request.Body.IsEventGrumble,
 	}
 
 	grumble, err := s.grumbleController.CreateGrumble(ctx, input)
@@ -387,16 +377,17 @@ func toAPIGrumble(resp *controller.GrumbleResponse) Grumble {
 	}
 
 	return Grumble{
-		GrumbleID:      openapi_types.UUID(resp.GrumbleID),
-		UserID:         openapi_types.UUID(resp.UserID),
-		Content:        resp.Content,
-		ToxicLevel:     resp.ToxicLevel,
-		VibeCount:      resp.VibeCount,
-		IsPurified:     resp.IsPurified,
-		PostedAt:       resp.PostedAt,
-		ExpiresAt:      resp.ExpiresAt,
-		IsEventGrumble: resp.IsEventGrumble,
-		HasVibed:       hasVibed,
+		GrumbleID:         openapi_types.UUID(resp.GrumbleID),
+		UserID:            openapi_types.UUID(resp.UserID),
+		Content:           resp.Content,
+		ToxicLevel:        resp.ToxicLevel,
+		VibeCount:         resp.VibeCount,
+		PurifiedThreshold: resp.PurifiedThreshold,
+		IsPurified:        resp.IsPurified,
+		PostedAt:          resp.PostedAt,
+		ExpiresAt:         resp.ExpiresAt,
+		IsEventGrumble:    resp.IsEventGrumble,
+		HasVibed:          hasVibed,
 	}
 }
 
