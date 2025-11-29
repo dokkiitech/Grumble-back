@@ -30,19 +30,21 @@ func NewGrumbleController(
 
 // CreateGrumbleInput is the application-level request for creating a grumble.
 type CreateGrumbleInput struct {
-	UserID         shared.UserID
-	Content        string
-	ToxicLevel     shared.ToxicLevel
-	IsEventGrumble bool
+	UserID            shared.UserID
+	Content           string
+	ToxicLevel        shared.ToxicLevel
+	PurifiedThreshold *int
+	IsEventGrumble    bool
 }
 
 // CreateGrumble executes the use case and returns the API-facing response model.
 func (ctrl *GrumbleController) CreateGrumble(ctx context.Context, input CreateGrumbleInput) (*GrumbleResponse, error) {
 	ucReq := usecase.PostGrumbleRequest{
-		UserID:         input.UserID,
-		Content:        input.Content,
-		ToxicLevel:     input.ToxicLevel,
-		IsEventGrumble: input.IsEventGrumble,
+		UserID:            input.UserID,
+		Content:           input.Content,
+		ToxicLevel:        input.ToxicLevel,
+		PurifiedThreshold: input.PurifiedThreshold,
+		IsEventGrumble:    input.IsEventGrumble,
 	}
 
 	grumble, err := ctrl.postGrumbleUC.Post(ctx, ucReq)
