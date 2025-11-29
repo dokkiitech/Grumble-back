@@ -28,6 +28,7 @@ components:
         - content
         - toxic_level
         - vibe_count
+        - purified_threshold
         - is_purified
         - posted_at
         - expires_at
@@ -54,6 +55,11 @@ components:
           type: integer
           minimum: 0
           description: 「わかる…」の総数
+        purified_threshold:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          description: 成仏するまでに必要な「わかる…」の数
         is_purified:
           type: boolean
           description: 成仏フラグ
@@ -87,6 +93,11 @@ components:
           minimum: 1
           maximum: 5
           description: 毒レベル（1〜5）
+        purified_threshold:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          description: 成仏するまでに必要な「わかる…」の数（オプション、未指定の場合はデフォルト値）
         is_event_grumble:
           type: boolean
           default: false
