@@ -24,7 +24,9 @@ type Config struct {
 	FirebaseCredentialsFile string
 
 	// Business Rules
-	PurificationThreshold          int
+	PurificationThresholdDefault   int
+	PurificationThresholdMin       int
+	PurificationThresholdMax       int
 	BodhisattvaRankingLimitDefault int
 	BodhisattvaRankingLimitMin     int
 	BodhisattvaRankingLimitMax     int
@@ -47,7 +49,9 @@ func LoadConfig() (*Config, error) {
 		FirebaseCredentialsFile:        os.Getenv("FIREBASE_CREDENTIALS_FILE"),
 		CORSAllowedOrigins:             getEnvStringSlice("CORS_ALLOWED_ORIGINS", []string{"http://localhost:3000", "http://localhost:8081", "http://localhost:19006"}),
 		GinMode:                        getEnv("GIN_MODE", gin.ReleaseMode),
-		PurificationThreshold:          getEnvInt("PURIFICATION_THRESHOLD", 10),
+		PurificationThresholdDefault:   getEnvInt("PURIFICATION_THRESHOLD_DEFAULT", 10),
+		PurificationThresholdMin:       getEnvInt("PURIFICATION_THRESHOLD_MIN", 1),
+		PurificationThresholdMax:       getEnvInt("PURIFICATION_THRESHOLD_MAX", 1000),
 		BodhisattvaRankingLimitDefault: getEnvInt("BODHISATTVA_RANKING_LIMIT_DEFAULT", 10),
 		BodhisattvaRankingLimitMin:     getEnvInt("BODHISATTVA_RANKING_LIMIT_MIN", 1),
 		BodhisattvaRankingLimitMax:     getEnvInt("BODHISATTVA_RANKING_LIMIT_MAX", 100),
