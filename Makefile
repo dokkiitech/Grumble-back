@@ -4,7 +4,7 @@
 OPENAPI_FILE := openapi.yaml
 DOCKER_COMPOSE := docker compose -f docker/docker-compose.yml
 LOCAL_DATABASE_URL := postgres://grumble:grumble@localhost:5432/grumble?sslmode=disable
-LOCAL_HTTP_ADDR := :8080
+LOCAL_HTTP_ADDR := :9999
 
 __init_go__:
 	@go mod download
