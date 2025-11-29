@@ -38,6 +38,10 @@ type Config struct {
 	// Performance
 	DBMaxConns int
 	DBMinConns int
+
+	// Content Moderation
+	GeminiAPIKey string
+	GeminiModel  string
 }
 
 // LoadConfig loads configuration from environment variables.
@@ -57,6 +61,8 @@ func LoadConfig() (*Config, error) {
 		BodhisattvaRankingLimitMax:     getEnvInt("BODHISATTVA_RANKING_LIMIT_MAX", 100),
 		DBMaxConns:                     getEnvInt("DB_MAX_CONNS", 25),
 		DBMinConns:                     getEnvInt("DB_MIN_CONNS", 5),
+		GeminiAPIKey:                   os.Getenv("GEMINI_API_KEY"),
+		GeminiModel:                    getEnv("GEMINI_MODEL", "gemini-2.5-flash-lite"),
 	}
 
 	if cfg.FirebaseCredentialsFile == "" {

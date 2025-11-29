@@ -15,6 +15,7 @@ import (
 type GrumblePostUseCase struct {
 	grumbleRepo              grumble.Repository
 	eventTimeSvc             *sharedservice.EventTimeService
+	contentFilter            grumble.ContentFilterClient
 	purifiedThresholdDefault int
 	purifiedThresholdMin     int
 	purifiedThresholdMax     int
@@ -24,6 +25,7 @@ type GrumblePostUseCase struct {
 func NewGrumblePostUseCase(
 	grumbleRepo grumble.Repository,
 	eventTimeSvc *sharedservice.EventTimeService,
+	contentFilter grumble.ContentFilterClient,
 	purifiedThresholdDefault int,
 	purifiedThresholdMin int,
 	purifiedThresholdMax int,
@@ -31,6 +33,7 @@ func NewGrumblePostUseCase(
 	return &GrumblePostUseCase{
 		grumbleRepo:              grumbleRepo,
 		eventTimeSvc:             eventTimeSvc,
+		contentFilter:            contentFilter,
 		purifiedThresholdDefault: purifiedThresholdDefault,
 		purifiedThresholdMin:     purifiedThresholdMin,
 		purifiedThresholdMax:     purifiedThresholdMax,
@@ -48,6 +51,20 @@ type PostGrumbleRequest struct {
 
 // Post creates and persists a new grumble
 func (uc *GrumblePostUseCase) Post(ctx context.Context, req PostGrumbleRequest) (*grumble.Grumble, error) {
+	// Filter content if content filter is configured
+	if uc.contentFilter != nil {
+		result, err := uc.contentFilter.FilterContent(ctx, req.Content)
+		if err != nil {
+			return nil, err
+		}
+
+		if !result.IsAppropriate {
+			return nil, &shared.InappropriateContentError{
+				Reason: result.Reason,
+			}
+		}
+	}
+
 	// Determine purified threshold: use provided value or default
 	purifiedThreshold := uc.purifiedThresholdDefault
 	if req.PurifiedThreshold != nil {

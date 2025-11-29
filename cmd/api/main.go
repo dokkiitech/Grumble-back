@@ -87,10 +87,14 @@ func main() {
 	userRepo := infrastructure.NewPostgresUserRepository(dbPool)
 	vibeRepo := infrastructure.NewPostgresVibeRepository(dbPool)
 
+	// Initialize content filter client
+	geminiClient := infrastructure.NewGeminiClient(cfg.GeminiAPIKey, cfg.GeminiModel)
+
 	// Initialize use cases
 	grumblePostUC := usecase.NewGrumblePostUseCase(
 		grumbleRepo,
 		eventTimeService,
+		geminiClient,
 		cfg.PurificationThresholdDefault,
 		cfg.PurificationThresholdMin,
 		cfg.PurificationThresholdMax,
