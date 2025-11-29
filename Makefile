@@ -95,7 +95,7 @@ local-api:
 	@echo "Building Docker image..."
 	@docker build -f docker/Dockerfile.api -t grumble-api:local .
 	@echo "Running API server in Docker..."
-	@docker run --rm -it \
+	@docker run --rm -d \
 		--network host \
 		-e DATABASE_URL="$(LOCAL_DATABASE_URL)" \
 		-e GRUMBLE_HTTP_ADDR="$(LOCAL_HTTP_ADDR)" \
