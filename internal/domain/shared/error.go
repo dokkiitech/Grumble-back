@@ -57,3 +57,12 @@ func (e *InternalError) Error() string {
 func (e *InternalError) Unwrap() error {
 	return e.Err
 }
+
+// InappropriateContentError represents content that violates moderation rules
+type InappropriateContentError struct {
+	Reason string
+}
+
+func (e *InappropriateContentError) Error() string {
+	return e.Reason
+}
