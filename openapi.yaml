@@ -24,7 +24,6 @@ components:
       type: object
       required:
         - grumble_id
-        - user_id
         - content
         - toxic_level
         - vibe_count
@@ -38,10 +37,6 @@ components:
           type: string
           format: uuid
           description: 投稿の一意識別子
-        user_id:
-          type: string
-          format: uuid
-          description: 投稿者の匿名ID
         content:
           type: string
           maxLength: 280
@@ -112,7 +107,6 @@ components:
       required:
         - vibe_id
         - grumble_id
-        - user_id
         - vibe_type
         - voted_at
       properties:
@@ -123,10 +117,6 @@ components:
           type: string
           format: uuid
           description: 共感対象の投稿ID
-        user_id:
-          type: string
-          format: uuid
-          description: 共感した匿名ユーザーID
         vibe_type:
           type: string
           enum: [WAKARU]
@@ -139,14 +129,9 @@ components:
     AnonymousUser:
       type: object
       required:
-        - user_id
         - virtue_points
         - created_at
       properties:
-        user_id:
-          type: string
-          format: uuid
-          description: 匿名ユーザーの一意識別子
         virtue_points:
           type: integer
           minimum: 0
