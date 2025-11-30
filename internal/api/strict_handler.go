@@ -156,11 +156,18 @@ func (s *StrictControllerServer) GetEventGrumbles(ctx context.Context, request G
 		offset = *params.Offset
 	}
 
+	var purifiedStatus *string
+	if params.PurifiedStatus != nil {
+		status := string(*params.PurifiedStatus)
+		purifiedStatus = &status
+	}
+
 	query := controller.EventGrumblesQuery{
-		ToxicLevelMin: params.ToxicLevelMin,
-		ToxicLevelMax: params.ToxicLevelMax,
-		Limit:         limit,
-		Offset:        offset,
+		ToxicLevelMin:  params.ToxicLevelMin,
+		ToxicLevelMax:  params.ToxicLevelMax,
+		PurifiedStatus: purifiedStatus,
+		Limit:          limit,
+		Offset:         offset,
 	}
 
 	response, err := s.eventGrumblesController.GetEventGrumbles(ctx, query)

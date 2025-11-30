@@ -30,10 +30,11 @@ func NewEventGrumblesController(
 
 // EventGrumblesQuery represents query parameters
 type EventGrumblesQuery struct {
-	ToxicLevelMin *int
-	ToxicLevelMax *int
-	Limit         int
-	Offset        int
+	ToxicLevelMin  *int
+	ToxicLevelMax  *int
+	PurifiedStatus *string // "is_purified", "is_not_purified", "all"
+	Limit          int
+	Offset         int
 }
 
 // EventGrumblesResponse represents the response
@@ -62,12 +63,27 @@ func (ctrl *EventGrumblesController) GetEventGrumbles(
 		toxicLevelMax = &tl
 	}
 
+	// PurifiedStatusからIsPurifiedフィルタを設定
+	var isPurified *bool
+	if query.PurifiedStatus != nil {
+		switch *query.PurifiedStatus {
+		case "is_purified":
+			trueVal := true
+			isPurified = &trueVal
+		case "is_not_purified":
+			falseVal := false
+			isPurified = &falseVal
+		case "all":
+			// nilのまま（全て取得）
+		}
+	}
+
 	req := usecase.EventGrumblesRequest{
-		ToxicLevelMin:   toxicLevelMin,
-		ToxicLevelMax:   toxicLevelMax,
-		ExcludePurified: false, // イベントでは全て表示
-		Limit:           query.Limit,
-		Offset:          query.Offset,
+		ToxicLevelMin: toxicLevelMin,
+		ToxicLevelMax: toxicLevelMax,
+		IsPurified:    isPurified,
+		Limit:         query.Limit,
+		Offset:        query.Offset,
 	}
 
 	result, err := ctrl.eventGrumblesGetUC.Get(ctx, req)
