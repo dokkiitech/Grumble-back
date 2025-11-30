@@ -48,9 +48,13 @@ func NewStrictControllerServer(
 	}
 }
 
-// GetEvents is currently not implemented.
+// GetEvents returns the list of events (currently returns empty array as events feature is not yet implemented).
 func (s *StrictControllerServer) GetEvents(ctx context.Context, _ GetEventsRequestObject) (GetEventsResponseObject, error) {
-	return nil, errors.New("GetEvents not implemented")
+	// Return empty events array for now (events feature not yet implemented)
+	events := []Event{}
+	return GetEvents200JSONResponse{
+		Events: &events,
+	}, nil
 }
 
 // GetEvent is currently not implemented.
