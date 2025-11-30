@@ -466,6 +466,7 @@ func toAPIGrumble(resp *controller.GrumbleResponse) Grumble {
 
 	return Grumble{
 		GrumbleID:         openapi_types.UUID(resp.GrumbleID),
+		UserID:            openapi_types.UUID(resp.UserID),
 		Content:           resp.Content,
 		ToxicLevel:        resp.ToxicLevel,
 		VibeCount:         resp.VibeCount,
@@ -482,6 +483,7 @@ func toAPIVibe(resp *controller.AddVibeResponse) Vibe {
 	return Vibe{
 		VibeID:    resp.VibeID,
 		GrumbleID: openapi_types.UUID(resp.GrumbleID),
+		UserID:    openapi_types.UUID(resp.UserID),
 		VibeType:  VibeVibeType(resp.VibeType),
 		VotedAt:   resp.VotedAt,
 	}
@@ -489,6 +491,7 @@ func toAPIVibe(resp *controller.AddVibeResponse) Vibe {
 
 func toAPIAnonymousUser(resp *controller.MyProfileResponse) AnonymousUser {
 	anon := AnonymousUser{
+		UserID:       openapi_types.UUID(resp.UserID),
 		VirtuePoints: resp.VirtuePoints,
 		CreatedAt:    resp.CreatedAt,
 	}
